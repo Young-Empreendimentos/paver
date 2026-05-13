@@ -189,27 +189,54 @@ export async function exportDiarioPdf(d: DiarioPdfData) {
   doc.save(`Diario_${safeName}_${dateStr}.pdf`);
 }
 
-function loadImageAsBase64(url: string): Promise<string> {
+async function loadImageAsBase64(url: string): Promise<string> {
+  // Fetch as blob first → avoids canvas CORS tainting and works for any image format
+  let blobUrl: string | null = null;
+  let srcForImg = url;
+  try {
+    const resp = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      blobUrl = URL.createObjectURL(blob);
+      srcForImg = blobUrl;
+    }
+  } catch {
+    // fall through to direct <img> load with crossOrigin
+  }
+
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (srcForImg === url) img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const maxDim = 400;
-      let w = img.width;
-      let h = img.height;
-      if (w > maxDim || h > maxDim) {
-        const ratio = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * ratio);
-        h = Math.round(h * ratio);
+      try {
+        const canvas = document.createElement('canvas');
+        const maxDim = 600;
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (!w || !h) { reject(new Error('Imagem sem dimensões')); return; }
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl);
+      } catch (e) {
+        reject(e);
+      } finally {
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
       }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.75));
     };
-    img.onerror = reject;
-    img.src = url;
+    img.onerror = (e) => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      reject(e);
+    };
+    img.src = srcForImg;
   });
 }
