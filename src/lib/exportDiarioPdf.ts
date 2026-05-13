@@ -167,8 +167,8 @@ export async function exportDiarioPdf(d: DiarioPdfData) {
             y = margin;
           }
         }
-      } catch {
-        // skip failed images
+      } catch (err) {
+        console.warn('[exportDiarioPdf] Falha ao carregar imagem:', url, err);
       }
     }
   }
