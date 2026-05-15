@@ -930,6 +930,7 @@ export type Database = {
           data: string
           descricao: string
           id: string
+          prazo: string | null
           tipo: Database["public"]["Enums"]["cobrancas_acao_tipo"]
           tipo_acao_id: string | null
         }
@@ -943,6 +944,7 @@ export type Database = {
           data: string
           descricao: string
           id?: string
+          prazo?: string | null
           tipo: Database["public"]["Enums"]["cobrancas_acao_tipo"]
           tipo_acao_id?: string | null
         }
@@ -956,6 +958,7 @@ export type Database = {
           data?: string
           descricao?: string
           id?: string
+          prazo?: string | null
           tipo?: Database["public"]["Enums"]["cobrancas_acao_tipo"]
           tipo_acao_id?: string | null
         }
