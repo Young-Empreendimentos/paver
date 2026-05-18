@@ -67,8 +67,12 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {groupedByServico.map(([servico, servItems]) => {
-          const sum = servItems.reduce((s, i) => s + itemAvanco(i), 0);
-          const avg = servItems.length > 0 ? sum / servItems.length : 0;
+          const totalQtd = servItems.reduce((s, i) => s + (i.quantidade ?? 0), 0);
+          const execQtd = servItems.reduce((s, i) => s + (i.quantidade ?? 0) * itemAvanco(i) / 100, 0);
+          const pct = totalQtd > 0 ? (execQtd / totalQtd) * 100 : 0;
+          const units = Array.from(new Set(servItems.map(i => i.unidade).filter(Boolean)));
+          const unit = units.length === 1 ? units[0] : '';
+          const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
           const isOpen = expanded.has(servico);
 
           return (
@@ -90,11 +94,18 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
                   <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all bg-emerald-500"
-                      style={{ width: `${avg}%` }}
+                      style={{ width: `${Math.min(100, pct)}%` }}
                     />
                   </div>
-                  <span className="text-xs font-body font-semibold tabular-nums w-10 text-right">
-                    {avg.toFixed(0)}%
+                  <span className="text-xs font-body tabular-nums whitespace-nowrap text-muted-foreground">
+                    <span className="font-semibold text-foreground">{fmt(execQtd)}</span>
+                    {unit && <span className="text-[10px] ml-0.5">{unit}</span>}
+                    {' / '}
+                    <span className="font-semibold text-foreground">{fmt(totalQtd)}</span>
+                    {unit && <span className="text-[10px] ml-0.5">{unit}</span>}
+                  </span>
+                  <span className="text-xs font-body font-semibold tabular-nums w-12 text-right">
+                    {pct.toFixed(1)}%
                   </span>
                   <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">
                     ({servItems.length} {servItems.length === 1 ? 'item' : 'itens'})
