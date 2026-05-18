@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Loader2, Tag as TagIcon } from 'lucide-react';
+import { Building2, Loader2, Tag as TagIcon, ChevronRight, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchAllEapItems, fetchObras, type EapItem } from '@/services/api';
 import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
