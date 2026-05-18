@@ -29,17 +29,6 @@ interface ObraBlockProps {
   items: EapItem[];
 }
 
-const subgroupOrder: Subgroup[] = ['Material', 'Serviço', 'Outros'];
-const subgroupIcon: Record<Subgroup, typeof Package> = {
-  Material: Package,
-  'Serviço': Hammer,
-  Outros: MoreHorizontal,
-};
-const subgroupColor: Record<Subgroup, string> = {
-  Material: 'bg-blue-500',
-  'Serviço': 'bg-emerald-500',
-  Outros: 'bg-amber-500',
-};
 
 function ObraBlock({ obraNome, items }: ObraBlockProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
