@@ -52,6 +52,8 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
   const [addingItem, setAddingItem] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [groupBy, setGroupBy] = useState<'pacote' | 'lote'>('pacote');
+  const [tagFilter, setTagFilter] = useState<string>('all'); // 'all' | 'none' | tag.id
+  const [openTagPopover, setOpenTagPopover] = useState<string | null>(null);
 
   // New item form
   const [newItem, setNewItem] = useState({
