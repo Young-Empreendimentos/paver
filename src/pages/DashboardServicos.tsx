@@ -80,20 +80,13 @@ export default function DashboardServicos() {
         <ExecutadoVsTotal obraId={obraId} />
       </section>
 
-      {/* Section C */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading text-base flex items-center gap-2">
-            <CalendarRange className="h-4 w-4 text-accent" />
-            Executado por Período
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-48 border border-dashed border-border rounded-md text-sm font-body text-muted-foreground">
-            Em breve
-          </div>
-        </CardContent>
-      </Card>
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <CalendarRange className="h-4 w-4 text-accent" />
+          <h2 className="text-base font-heading font-semibold">Executado por Período</h2>
+        </div>
+        <ExecutadoPorPeriodo obraId={obraId} />
+      </section>
     </div>
   );
 }
