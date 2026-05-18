@@ -91,19 +91,19 @@ export default function ExecutadoVsTotal({ obraId }: Props) {
   const { data: obras = [], isLoading: loadingObras } = useQuery({
     queryKey: ['obras'],
     queryFn: fetchObras,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const { data: allItems = [], isLoading: loadingItems } = useQuery({
     queryKey: ['eap-all-with-avanco'],
     queryFn: fetchAllEapItems,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const { data: tags = [], isLoading: loadingTags } = useQuery({
     queryKey: ['service-tags'],
     queryFn: fetchServiceTags,
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const tagsByKey = useMemo(() => {
