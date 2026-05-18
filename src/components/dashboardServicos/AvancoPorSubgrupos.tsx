@@ -3,17 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Building2, Loader2, Hammer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchAllEapItems, fetchObras, type EapItem } from '@/services/api';
-
-type Subgroup = 'Material' | 'Serviço' | 'Outros';
-
-function classify(item: EapItem): Subgroup {
-  const desc = (item.descricao || '').toLowerCase();
-  // Serviço (mão de obra)
-  if (/m[aã]o\s*de\s*obra|^m\.?o\.?\b|\bmão\s*de\s*obra\b/i.test(desc)) return 'Serviço';
-  // Material precisa ter unidade física mensurável
-  if (item.unidade && item.unidade.trim() !== '') return 'Material';
-  return 'Outros';
-}
+import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
 
 function itemAvanco(item: EapItem): number {
   // enrichWithComputedAvanco já popula avanco_realizado (0-100)
@@ -24,22 +14,23 @@ interface ObraBlockProps {
   obraId: string;
   obraNome: string;
   items: EapItem[];
+  tagsById: Map<string, ServiceTag>;
 }
 
 
-function ObraBlock({ obraNome, items }: ObraBlockProps) {
+function ObraBlock({ obraNome, items, tagsById }: ObraBlockProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Apenas itens de Serviço (mão de obra)
+  // Apenas itens com tag atribuída; itens sem tag não entram nos indicadores.
   const groupedByServico = useMemo(() => {
     const map = new Map<string, EapItem[]>();
-    for (const it of items.filter(i => i.tipo === 'item' && classify(i) === 'Serviço')) {
-      const key = it.lote || 'Sem serviço';
+    for (const it of items.filter(i => i.tipo === 'item' && i.tag_id && tagsById.has(i.tag_id))) {
+      const key = tagsById.get(it.tag_id!)!.nome;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(it);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [items]);
+  }, [items, tagsById]);
 
   if (groupedByServico.length === 0) {
     return (
@@ -51,7 +42,7 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground font-body">Nenhum serviço encontrado para esta obra.</p>
+          <p className="text-sm text-muted-foreground font-body">Nenhum item com tag atribuída para esta obra.</p>
         </CardContent>
       </Card>
     );
@@ -158,16 +149,27 @@ export default function AvancoPorSubgrupos({ obraId }: Props) {
   const { data: obras = [], isLoading: loadingObras } = useQuery({
     queryKey: ['obras'],
     queryFn: fetchObras,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const { data: allItems = [], isLoading: loadingItems } = useQuery({
     queryKey: ['eap-all-with-avanco'],
     queryFn: fetchAllEapItems,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
-  const isLoading = loadingObras || loadingItems;
+  const { data: tags = [], isLoading: loadingTags } = useQuery({
+    queryKey: ['service-tags'],
+    queryFn: fetchServiceTags,
+    staleTime: 0,
+  });
+
+  const tagsById = useMemo(
+    () => new Map(tags.map(tag => [tag.id, tag])),
+    [tags],
+  );
+
+  const isLoading = loadingObras || loadingItems || loadingTags;
 
   const obrasToShow = useMemo(() => {
     if (obraId === 'all') return obras;
@@ -211,6 +213,7 @@ export default function AvancoPorSubgrupos({ obraId }: Props) {
           obraId={o.id}
           obraNome={o.nome}
           items={itemsByObra.get(o.id) || []}
+          tagsById={tagsById}
         />
       ))}
     </div>

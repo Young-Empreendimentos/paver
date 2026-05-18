@@ -120,13 +120,13 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
   const { data: rows = [], isLoading: loadingRows } = useQuery({
     queryKey: ['diario-historico-tags'],
     queryFn: fetchDiarioHistorico,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const { data: tags = [], isLoading: loadingTags } = useQuery({
     queryKey: ['service-tags'],
     queryFn: fetchServiceTags,
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const tagsByKey = useMemo(() => {
