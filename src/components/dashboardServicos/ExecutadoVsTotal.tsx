@@ -53,7 +53,7 @@ function ObraCard({ obraNome, items, tags }: ObraCardProps) {
             <div key={tag.id} className="space-y-1">
               <div className="flex items-center gap-2 text-sm font-body">
                 <TagIcon className={cn('h-3.5 w-3.5 shrink-0', palette.icon)} />
-                <span className="font-heading font-semibold w-56 shrink-0 truncate" title={tag.nome}>{tag.nome}</span>
+                <span className="font-heading font-semibold w-56 shrink-0 truncate" title={tag.nome}>{prettyTag(tag.nome)}</span>
                 {empty ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
