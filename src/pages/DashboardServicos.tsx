@@ -61,19 +61,13 @@ export default function DashboardServicos() {
       </Card>
 
       {/* Section A */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading text-base flex items-center gap-2">
-            <Layers className="h-4 w-4 text-accent" />
-            Avanço por Subgrupos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-48 border border-dashed border-border rounded-md text-sm font-body text-muted-foreground">
-            Em breve
-          </div>
-        </CardContent>
-      </Card>
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Layers className="h-4 w-4 text-accent" />
+          <h2 className="text-base font-heading font-semibold">Avanço por Subgrupos</h2>
+        </div>
+        <AvancoPorSubgrupos obraId={obraId} />
+      </section>
 
       {/* Section B */}
       <Card className="shadow-sm">
