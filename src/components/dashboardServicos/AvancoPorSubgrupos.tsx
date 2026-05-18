@@ -67,11 +67,23 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {groupedByServico.map(([servico, servItems]) => {
-          const totalQtd = servItems.reduce((s, i) => s + (i.quantidade ?? 0), 0);
-          const execQtd = servItems.reduce((s, i) => s + (i.quantidade ?? 0) * itemAvanco(i) / 100, 0);
-          const pct = totalQtd > 0 ? (execQtd / totalQtd) * 100 : 0;
-          const units = Array.from(new Set(servItems.map(i => i.unidade).filter(Boolean)));
-          const unit = units.length === 1 ? units[0] : '';
+          // Agrupa por unidade para calcular % ponderada apenas entre itens compatíveis,
+          // depois faz a média simples entre as unidades (evita misturar un com m, m² etc.)
+          const byUnit = new Map<string, { tot: number; exec: number }>();
+          for (const i of servItems) {
+            const u = (i.unidade || '—').trim() || '—';
+            const q = i.quantidade ?? 0;
+            const cur = byUnit.get(u) ?? { tot: 0, exec: 0 };
+            cur.tot += q;
+            cur.exec += q * itemAvanco(i) / 100;
+            byUnit.set(u, cur);
+          }
+          const unitPcts = Array.from(byUnit.values())
+            .filter(v => v.tot > 0)
+            .map(v => (v.exec / v.tot) * 100);
+          const pct = unitPcts.length > 0
+            ? unitPcts.reduce((a, b) => a + b, 0) / unitPcts.length
+            : 0;
           const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
           const isOpen = expanded.has(servico);
 
