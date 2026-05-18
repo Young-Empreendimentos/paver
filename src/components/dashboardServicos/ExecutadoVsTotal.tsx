@@ -1,18 +1,20 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Loader2, Droplets, CloudRain, Waves, Construction } from 'lucide-react';
+import { Building2, Loader2, Tag as TagIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchAllEapItems, fetchObras, type EapItem } from '@/services/api';
 import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
 import { cn } from '@/lib/utils';
 
-type TagKey = 'agua' | 'pluvial' | 'cloacal' | 'pavimentacao';
-
-const TAG_DEFS: { key: TagKey; label: string; match: RegExp; icon: typeof Droplets; barClass: string; iconClass: string }[] = [
-  { key: 'agua',        label: 'Rede de água',  match: /rede\s+de\s+[áa]gua/i,   icon: Droplets,     barClass: 'bg-sky-500',     iconClass: 'text-sky-600' },
-  { key: 'pluvial',     label: 'Rede pluvial',  match: /pluvial/i,                icon: CloudRain,    barClass: 'bg-slate-400',   iconClass: 'text-slate-500' },
-  { key: 'cloacal',     label: 'Rede cloacal',  match: /cloacal/i,                icon: Waves,        barClass: 'bg-amber-700/70', iconClass: 'text-amber-700' },
-  { key: 'pavimentacao',label: 'Pavimentação',  match: /pavimenta/i,              icon: Construction, barClass: 'bg-zinc-700',    iconClass: 'text-zinc-700' },
+const PALETTE = [
+  { bar: 'bg-sky-500',      icon: 'text-sky-600' },
+  { bar: 'bg-slate-400',    icon: 'text-slate-500' },
+  { bar: 'bg-amber-700/70', icon: 'text-amber-700' },
+  { bar: 'bg-zinc-700',     icon: 'text-zinc-700' },
+  { bar: 'bg-emerald-500',  icon: 'text-emerald-600' },
+  { bar: 'bg-violet-500',   icon: 'text-violet-600' },
+  { bar: 'bg-rose-500',     icon: 'text-rose-600' },
+  { bar: 'bg-cyan-500',     icon: 'text-cyan-600' },
 ];
 
 const fmtNum = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
@@ -21,10 +23,10 @@ const fmtPct = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits:
 interface ObraCardProps {
   obraNome: string;
   items: EapItem[];
-  tagsByKey: Map<TagKey, ServiceTag | undefined>;
+  tags: ServiceTag[];
 }
 
-function ObraCard({ obraNome, items, tagsByKey }: ObraCardProps) {
+function ObraCard({ obraNome, items, tags }: ObraCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -34,27 +36,23 @@ function ObraCard({ obraNome, items, tagsByKey }: ObraCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {TAG_DEFS.map(def => {
-          const tag = tagsByKey.get(def.key);
-          const Icon = def.icon;
-          const matching = tag
-            ? items.filter(i => i.tipo === 'item' && i.tag_id === tag.id)
-            : [];
-
+        {tags.map((tag, idx) => {
+          const palette = PALETTE[idx % PALETTE.length];
+          const matching = items.filter(i => i.tipo === 'item' && i.tag_id === tag.id);
           const total = matching.reduce((s, i) => s + (i.quantidade ?? 0), 0);
           const executado = matching.reduce(
             (s, i) => s + (i.quantidade ?? 0) * Math.max(0, Math.min(100, i.avanco_realizado ?? 0)) / 100,
             0,
           );
           const pct = total > 0 ? (executado / total) * 100 : 0;
-          const unidade = tag?.unidade_permitida ?? '';
+          const unidade = tag.unidade_permitida ?? '';
           const empty = matching.length === 0 || total === 0;
 
           return (
-            <div key={def.key} className="space-y-1">
+            <div key={tag.id} className="space-y-1">
               <div className="flex items-center gap-2 text-sm font-body">
-                <Icon className={cn('h-3.5 w-3.5 shrink-0', def.iconClass)} />
-                <span className="font-heading font-semibold w-32 shrink-0">{def.label}</span>
+                <TagIcon className={cn('h-3.5 w-3.5 shrink-0', palette.icon)} />
+                <span className="font-heading font-semibold w-56 shrink-0 truncate" title={tag.nome}>{tag.nome}</span>
                 {empty ? (
                   <span className="text-muted-foreground">—</span>
                 ) : (
@@ -68,9 +66,9 @@ function ObraCard({ obraNome, items, tagsByKey }: ObraCardProps) {
                 )}
               </div>
               {!empty && (
-                <div className="h-2 bg-muted rounded-full overflow-hidden ml-[136px]">
+                <div className="h-2 bg-muted rounded-full overflow-hidden ml-[232px]">
                   <div
-                    className={cn('h-full rounded-full transition-all', def.barClass)}
+                    className={cn('h-full rounded-full transition-all', palette.bar)}
                     style={{ width: `${Math.min(100, pct)}%` }}
                   />
                 </div>
@@ -106,14 +104,6 @@ export default function ExecutadoVsTotal({ obraId }: Props) {
     staleTime: 0,
   });
 
-  const tagsByKey = useMemo(() => {
-    const m = new Map<TagKey, ServiceTag | undefined>();
-    for (const def of TAG_DEFS) {
-      m.set(def.key, tags.find(t => def.match.test(t.nome)));
-    }
-    return m;
-  }, [tags]);
-
   const itemsByObra = useMemo(() => {
     const m = new Map<string, EapItem[]>();
     for (const it of allItems) {
@@ -145,7 +135,7 @@ export default function ExecutadoVsTotal({ obraId }: Props) {
     );
   }
 
-  if (!hasAnyTagged) {
+  if (!hasAnyTagged || tags.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center text-sm font-body text-muted-foreground">
@@ -172,7 +162,7 @@ export default function ExecutadoVsTotal({ obraId }: Props) {
           key={o.id}
           obraNome={o.nome}
           items={itemsByObra.get(o.id) || []}
-          tagsByKey={tagsByKey}
+          tags={tags}
         />
       ))}
     </div>

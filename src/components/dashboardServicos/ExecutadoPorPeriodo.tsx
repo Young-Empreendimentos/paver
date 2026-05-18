@@ -18,13 +18,10 @@ import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
 
 type Granularity = 'week' | 'month';
 type Mode = 'period' | 'cumulative';
-type TagKey = 'agua' | 'pluvial' | 'cloacal' | 'pavimentacao';
 
-const TAG_DEFS: { key: TagKey; label: string; short: string; match: RegExp; color: string }[] = [
-  { key: 'agua',         label: 'Rede de água',  short: 'Água',     match: /rede\s+de\s+[áa]gua/i, color: '#0ea5e9' },
-  { key: 'pluvial',      label: 'Rede pluvial',  short: 'Pluvial',  match: /pluvial/i,             color: '#64748b' },
-  { key: 'cloacal',      label: 'Rede cloacal',  short: 'Cloacal',  match: /cloacal/i,             color: '#b45309' },
-  { key: 'pavimentacao', label: 'Pavimentação',  short: 'Pavim.',   match: /pavimenta/i,           color: '#3f3f46' },
+const COLORS = [
+  '#0ea5e9', '#64748b', '#b45309', '#3f3f46',
+  '#10b981', '#8b5cf6', '#f43f5e', '#06b6d4',
 ];
 
 const VISIBLE = 6;
@@ -32,7 +29,7 @@ const fmtNum = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits:
 
 interface DiarioRow {
   quantidade_dia: number;
-  data: string; // YYYY-MM-DD
+  data: string;
   eap_item: {
     obra_id: string;
     tag_id: string | null;
@@ -40,7 +37,6 @@ interface DiarioRow {
 }
 
 async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
-  // Sem FKs declaradas → 3 queries + join manual
   const [atvRes, diariosRes, itemsRes] = await Promise.all([
     supabase.from('paver_diario_atividades').select('quantidade_dia, diario_id, eap_item_id'),
     supabase.from('paver_diarios').select('id, data'),
@@ -59,7 +55,7 @@ async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
   for (const a of (atvRes.data || []) as any[]) {
     const item = itemById.get(a.eap_item_id);
     const data = diarioById.get(a.diario_id);
-    if (!item || !data) continue; // só itens com tag e diário válido
+    if (!item || !data) continue;
     rows.push({
       quantidade_dia: Number(a.quantidade_dia) || 0,
       data,
@@ -70,7 +66,7 @@ async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
 }
 
 interface Props {
-  obraId: string; // 'all' or specific id
+  obraId: string;
 }
 
 interface Period {
@@ -81,7 +77,6 @@ interface Period {
 }
 
 function buildPeriods(granularity: Granularity, anchor: Date): Period[] {
-  // anchor = end period; build VISIBLE periods ending at anchor
   const periods: Period[] = [];
   for (let i = VISIBLE - 1; i >= 0; i--) {
     if (granularity === 'month') {
@@ -111,6 +106,14 @@ function buildPeriods(granularity: Granularity, anchor: Date): Period[] {
   return periods;
 }
 
+interface TagDef {
+  id: string;
+  label: string;
+  short: string;
+  color: string;
+  unidade: string;
+}
+
 export default function ExecutadoPorPeriodo({ obraId }: Props) {
   const [granularity, setGranularity] = useState<Granularity>('month');
   const [mode, setMode] = useState<Mode>('period');
@@ -129,52 +132,50 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
     staleTime: 0,
   });
 
-  const tagsByKey = useMemo(() => {
-    const m = new Map<TagKey, ServiceTag | undefined>();
-    for (const def of TAG_DEFS) m.set(def.key, tags.find(t => def.match.test(t.nome)));
-    return m;
-  }, [tags]);
+  const tagDefs: TagDef[] = useMemo(
+    () => tags.map((t, i) => ({
+      id: t.id,
+      label: t.nome,
+      short: t.nome.replace(/^MO de (execução de )?/i, '').trim(),
+      color: COLORS[i % COLORS.length],
+      unidade: t.unidade_permitida || '',
+    })),
+    [tags],
+  );
 
-  const tagIdToKey = useMemo(() => {
-    const m = new Map<string, TagKey>();
-    for (const [k, t] of tagsByKey.entries()) if (t) m.set(t.id, k);
-    return m;
-  }, [tagsByKey]);
+  const tagIds = useMemo(() => new Set(tagDefs.map(t => t.id)), [tagDefs]);
 
   const filteredRows = useMemo(
     () => rows.filter(r =>
       r.eap_item &&
       r.eap_item.tag_id &&
-      tagIdToKey.has(r.eap_item.tag_id) &&
+      tagIds.has(r.eap_item.tag_id) &&
       (obraId === 'all' || r.eap_item.obra_id === obraId),
     ),
-    [rows, obraId, tagIdToKey],
+    [rows, obraId, tagIds],
   );
 
   const periods = useMemo(() => buildPeriods(granularity, anchor), [granularity, anchor]);
 
-  // chartData: array of { label, agua, pluvial, cloacal, pavimentacao }
   const chartData = useMemo(() => {
     return periods.map(p => {
       const point: Record<string, any> = { label: p.label, key: p.key };
-      for (const def of TAG_DEFS) {
+      for (const def of tagDefs) {
         let total = 0;
         for (const r of filteredRows) {
-          const tk = tagIdToKey.get(r.eap_item!.tag_id!);
-          if (tk !== def.key) continue;
+          if (r.eap_item!.tag_id !== def.id) continue;
           const d = parseISO(r.data);
           if (mode === 'period') {
             if (isWithinInterval(d, { start: p.start, end: p.end })) total += r.quantidade_dia;
           } else {
-            // acumulado: até o fim do período
             if (isBefore(d, p.end) || isEqual(d, p.end)) total += r.quantidade_dia;
           }
         }
-        point[def.key] = Math.round(total * 100) / 100;
+        point[def.id] = Math.round(total * 100) / 100;
       }
       return point;
     });
-  }, [periods, filteredRows, tagIdToKey, mode]);
+  }, [periods, filteredRows, tagDefs, mode]);
 
   const navigate = (dir: -1 | 1) => {
     setAnchor(prev => granularity === 'month' ? addMonths(prev, dir * 3) : addWeeks(prev, dir * 3));
@@ -191,9 +192,16 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
   const isLoading = loadingRows || loadingTags;
   const hasData = filteredRows.length > 0;
 
-  // split tags into 2 charts by unit (m vs m²)
-  const metersTags = TAG_DEFS.filter(d => d.key !== 'pavimentacao');
-  const sqmTags = TAG_DEFS.filter(d => d.key === 'pavimentacao');
+  // Group tag defs by unidade for separate charts
+  const tagsByUnit = useMemo(() => {
+    const m = new Map<string, TagDef[]>();
+    for (const def of tagDefs) {
+      const u = def.unidade || '—';
+      if (!m.has(u)) m.set(u, []);
+      m.get(u)!.push(def);
+    }
+    return Array.from(m.entries());
+  }, [tagDefs]);
 
   if (isLoading) {
     return (
@@ -218,7 +226,6 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
   return (
     <Card>
       <CardContent className="pt-5 space-y-5">
-        {/* Controls */}
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-xs font-body text-muted-foreground">Granularidade:</span>
@@ -251,13 +258,18 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
           </div>
         </div>
 
-        {/* Charts */}
         <div ref={scrollRef} onWheel={onWheel} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ChartCard title="Redes lineares (m)" data={chartData} tagDefs={metersTags} unit="m" />
-          <ChartCard title="Pavimentação (m²)" data={chartData} tagDefs={sqmTags} unit="m²" />
+          {tagsByUnit.map(([unit, defs]) => (
+            <ChartCard
+              key={unit}
+              title={`Unidade: ${unit}`}
+              data={chartData}
+              tagDefs={defs}
+              unit={unit}
+            />
+          ))}
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs font-body border-collapse">
             <thead>
@@ -271,24 +283,21 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {TAG_DEFS.map(def => {
-                const unit = def.key === 'pavimentacao' ? 'm²' : 'm';
-                return (
-                  <tr key={def.key} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="py-1.5 px-2">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ background: def.color }} />
-                        {def.short}
-                      </div>
+              {tagDefs.map(def => (
+                <tr key={def.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="py-1.5 px-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ background: def.color }} />
+                      <span className="truncate max-w-[240px]" title={def.label}>{def.short}</span>
+                    </div>
+                  </td>
+                  {chartData.map(d => (
+                    <td key={d.key} className="text-right py-1.5 px-2 tabular-nums text-muted-foreground">
+                      {fmtNum(d[def.id])}<span className="text-[10px] ml-0.5">{def.unidade}</span>
                     </td>
-                    {chartData.map(d => (
-                      <td key={d.key} className="text-right py-1.5 px-2 tabular-nums text-muted-foreground">
-                        {fmtNum(d[def.key])}<span className="text-[10px] ml-0.5">{unit}</span>
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })}
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -300,7 +309,7 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
 function ChartCard({ title, data, tagDefs, unit }: {
   title: string;
   data: any[];
-  tagDefs: typeof TAG_DEFS;
+  tagDefs: TagDef[];
   unit: string;
 }) {
   return (
@@ -321,15 +330,15 @@ function ChartCard({ title, data, tagDefs, unit }: {
                   <div className="rounded-md border bg-popover px-3 py-2 shadow-md text-xs font-body">
                     <div className="font-semibold mb-1">{label}</div>
                     {payload.map((p: any) => {
-                      const def = tagDefs.find(d => d.key === p.dataKey);
+                      const def = tagDefs.find(d => d.id === p.dataKey);
                       if (!def) return null;
                       const v = Number(p.value) || 0;
-                      const prevV = prev ? Number(prev[def.key]) || 0 : 0;
+                      const prevV = prev ? Number(prev[def.id]) || 0 : 0;
                       const diff = v - prevV;
                       return (
                         <div key={p.dataKey} className="flex items-center gap-2 py-0.5">
                           <span className="h-2 w-2 rounded-full" style={{ background: def.color }} />
-                          <span className="flex-1">{def.label}</span>
+                          <span className="flex-1">{def.short}</span>
                           <span className="tabular-nums font-semibold">{fmtNum(v)} {unit}</span>
                           {prev && (
                             <span className={`tabular-nums text-[10px] ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -346,10 +355,10 @@ function ChartCard({ title, data, tagDefs, unit }: {
             <Legend wrapperStyle={{ fontSize: 11 }} />
             {tagDefs.map(def => (
               <Line
-                key={def.key}
+                key={def.id}
                 type="monotone"
-                dataKey={def.key}
-                name={def.label}
+                dataKey={def.id}
+                name={def.short}
                 stroke={def.color}
                 strokeWidth={2}
                 dot={{ r: 3 }}
