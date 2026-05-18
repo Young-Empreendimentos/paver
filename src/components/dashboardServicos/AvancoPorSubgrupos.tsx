@@ -117,16 +117,21 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
                 <div className="border-t px-3 py-2 space-y-1 bg-muted/10">
                   {servItems.map(it => {
                     const av = itemAvanco(it);
+                    const q = it.quantidade ?? 0;
+                    const ex = q * av / 100;
                     return (
                       <div key={it.id} className="flex items-center gap-2 text-[11px] font-body py-1 px-2 rounded hover:bg-muted/40">
                         {it.codigo && (
                           <span className="text-[10px] text-muted-foreground font-mono shrink-0">{it.codigo}</span>
                         )}
                         <span className="flex-1 truncate">{it.descricao}</span>
-                        <span className="text-muted-foreground whitespace-nowrap">
-                          {(it.quantidade ?? 0).toLocaleString('pt-BR')} {it.unidade || ''}
+                        <span className="text-muted-foreground whitespace-nowrap tabular-nums">
+                          <span className="font-semibold text-foreground">{fmt(ex)}</span>
+                          {' / '}
+                          <span className="font-semibold text-foreground">{fmt(q)}</span>
+                          {it.unidade ? ` ${it.unidade}` : ''}
                         </span>
-                        <span className="font-semibold tabular-nums w-10 text-right">{av.toFixed(0)}%</span>
+                        <span className="font-semibold tabular-nums w-12 text-right">{av.toFixed(1)}%</span>
                       </div>
                     );
                   })}
