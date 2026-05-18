@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Activity, Layers, PieChart, CalendarRange } from 'lucide-react';
 import { fetchObras } from '@/services/api';
 import AvancoPorSubgrupos from '@/components/dashboardServicos/AvancoPorSubgrupos';
+import ExecutadoVsTotal from '@/components/dashboardServicos/ExecutadoVsTotal';
 
 const ALL = 'all';
 
@@ -70,19 +71,13 @@ export default function DashboardServicos() {
       </section>
 
       {/* Section B */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-heading text-base flex items-center gap-2">
-            <PieChart className="h-4 w-4 text-accent" />
-            Executado vs Total (por tag)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-48 border border-dashed border-border rounded-md text-sm font-body text-muted-foreground">
-            Em breve
-          </div>
-        </CardContent>
-      </Card>
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <PieChart className="h-4 w-4 text-accent" />
+          <h2 className="text-base font-heading font-semibold">Executado vs Total (por tag)</h2>
+        </div>
+        <ExecutadoVsTotal obraId={obraId} />
+      </section>
 
       {/* Section C */}
       <Card className="shadow-sm">
