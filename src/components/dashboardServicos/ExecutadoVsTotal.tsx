@@ -17,6 +17,7 @@ const PALETTE = [
   { bar: 'bg-cyan-500',     icon: 'text-cyan-600' },
 ];
 
+const prettyTag = (s: string) => s.replace(/^MO de (execução de )?/i, '').trim();
 const fmtNum = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 const fmtPct = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
