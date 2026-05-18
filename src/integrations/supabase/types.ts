@@ -4389,6 +4389,7 @@ export type Database = {
           preco_total: number
           preco_unitario: number
           quantidade: number
+          tag_id: string | null
           tipo_servico: string | null
           unidade: string | null
         }
@@ -4408,6 +4409,7 @@ export type Database = {
           preco_total?: number
           preco_unitario?: number
           quantidade?: number
+          tag_id?: string | null
           tipo_servico?: string | null
           unidade?: string | null
         }
@@ -4427,6 +4429,7 @@ export type Database = {
           preco_total?: number
           preco_unitario?: number
           quantidade?: number
+          tag_id?: string | null
           tipo_servico?: string | null
           unidade?: string | null
         }
@@ -4443,6 +4446,13 @@ export type Database = {
             columns: ["orcamento_id"]
             isOneToOne: false
             referencedRelation: "paver_orcamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paver_orcamento_itens_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "paver_service_tags"
             referencedColumns: ["id"]
           },
         ]
@@ -4544,6 +4554,27 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      paver_service_tags: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          unidade_permitida: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          unidade_permitida: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          unidade_permitida?: string
         }
         Relationships: []
       }
