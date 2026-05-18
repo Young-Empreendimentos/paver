@@ -279,6 +279,19 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
               Serviço
             </button>
           </div>
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger className="h-8 text-xs font-body w-[170px] shrink-0">
+              <TagIcon className="h-3.5 w-3.5 mr-1" />
+              <SelectValue placeholder="Filtrar por tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs font-body">Todas as tags</SelectItem>
+              <SelectItem value="none" className="text-xs font-body">Sem tag</SelectItem>
+              {serviceTags.map(t => (
+                <SelectItem key={t.id} value={t.id} className="text-xs font-body">{t.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             size="sm"
             className="h-8 text-xs font-body"
