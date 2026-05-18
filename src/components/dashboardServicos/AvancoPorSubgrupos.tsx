@@ -158,7 +158,18 @@ export default function AvancoPorSubgrupos({ obraId }: Props) {
     staleTime: 30_000,
   });
 
-  const isLoading = loadingObras || loadingItems;
+  const { data: tags = [], isLoading: loadingTags } = useQuery({
+    queryKey: ['service-tags'],
+    queryFn: fetchServiceTags,
+    staleTime: 60_000,
+  });
+
+  const tagsById = useMemo(
+    () => new Map(tags.map(tag => [tag.id, tag])),
+    [tags],
+  );
+
+  const isLoading = loadingObras || loadingItems || loadingTags;
 
   const obrasToShow = useMemo(() => {
     if (obraId === 'all') return obras;
@@ -202,6 +213,7 @@ export default function AvancoPorSubgrupos({ obraId }: Props) {
           obraId={o.id}
           obraNome={o.nome}
           items={itemsByObra.get(o.id) || []}
+          tagsById={tagsById}
         />
       ))}
     </div>
