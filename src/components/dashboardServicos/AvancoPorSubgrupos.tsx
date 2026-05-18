@@ -97,13 +97,6 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
                       style={{ width: `${Math.min(100, pct)}%` }}
                     />
                   </div>
-                  <span className="text-xs font-body tabular-nums whitespace-nowrap text-muted-foreground">
-                    <span className="font-semibold text-foreground">{fmt(execQtd)}</span>
-                    {unit && <span className="text-[10px] ml-0.5">{unit}</span>}
-                    {' / '}
-                    <span className="font-semibold text-foreground">{fmt(totalQtd)}</span>
-                    {unit && <span className="text-[10px] ml-0.5">{unit}</span>}
-                  </span>
                   <span className="text-xs font-body font-semibold tabular-nums w-12 text-right">
                     {pct.toFixed(1)}%
                   </span>
