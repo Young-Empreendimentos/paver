@@ -2,9 +2,6 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Building2, Loader2, Hammer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
 import { fetchAllEapItems, fetchObras, type EapItem } from '@/services/api';
 
 type Subgroup = 'Material' | 'Serviço' | 'Outros';
