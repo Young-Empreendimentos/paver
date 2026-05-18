@@ -67,19 +67,46 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
     enabled: open && !!obraId,
   });
 
+  const { data: serviceTags = [] } = useQuery({
+    queryKey: ['service-tags'],
+    queryFn: fetchServiceTags,
+    enabled: open,
+  });
+
+  const tagsById = useMemo(() => {
+    const m = new Map<string, ServiceTag>();
+    for (const t of serviceTags) m.set(t.id, t);
+    return m;
+  }, [serviceTags]);
+
   const items = useMemo(() => eapItems.filter(i => i.tipo === 'item'), [eapItems]);
 
+  // Counter: items with unit m/m² still without tag
+  const semTagCount = useMemo(() => {
+    const eligible = items.filter(i => i.unidade === 'm' || i.unidade === 'm²');
+    const semTag = eligible.filter(i => !i.tag_id).length;
+    return { semTag, total: eligible.length };
+  }, [items]);
+
   const filtered = useMemo(() => {
-    if (!search) return items;
-    const q = search.toLowerCase();
-    return items.filter(i =>
-      i.descricao.toLowerCase().includes(q) ||
-      i.pacote?.toLowerCase().includes(q) ||
-      i.lote?.toLowerCase().includes(q) ||
-      i.codigo?.toLowerCase().includes(q) ||
-      i.classificacao_adicional?.toLowerCase().includes(q)
-    );
-  }, [items, search]);
+    let list = items;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(i =>
+        i.descricao.toLowerCase().includes(q) ||
+        i.pacote?.toLowerCase().includes(q) ||
+        i.lote?.toLowerCase().includes(q) ||
+        i.codigo?.toLowerCase().includes(q) ||
+        i.classificacao_adicional?.toLowerCase().includes(q)
+      );
+    }
+    if (tagFilter === 'none') {
+      list = list.filter(i => !i.tag_id);
+    } else if (tagFilter !== 'all') {
+      list = list.filter(i => i.tag_id === tagFilter);
+    }
+    return list;
+  }, [items, search, tagFilter]);
 
   // Group by pacote or lote (serviço)
   const grouped = useMemo(() => {
