@@ -14,13 +14,18 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, Plus, Pencil, Trash2, Save, X, Loader2,
-  ChevronDown, ChevronRight, Package, Layers,
+  ChevronDown, ChevronRight, Package, Layers, Tag as TagIcon,
 } from 'lucide-react';
 import { fetchEapItems, type EapItem } from '@/services/api';
 import { updateEapItem, deleteEapItem, insertSingleEapItem } from '@/services/eapApi';
+import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -47,6 +52,8 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
   const [addingItem, setAddingItem] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [groupBy, setGroupBy] = useState<'pacote' | 'lote'>('pacote');
+  const [tagFilter, setTagFilter] = useState<string>('all'); // 'all' | 'none' | tag.id
+  const [openTagPopover, setOpenTagPopover] = useState<string | null>(null);
 
   // New item form
   const [newItem, setNewItem] = useState({
@@ -60,19 +67,46 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
     enabled: open && !!obraId,
   });
 
+  const { data: serviceTags = [] } = useQuery({
+    queryKey: ['service-tags'],
+    queryFn: fetchServiceTags,
+    enabled: open,
+  });
+
+  const tagsById = useMemo(() => {
+    const m = new Map<string, ServiceTag>();
+    for (const t of serviceTags) m.set(t.id, t);
+    return m;
+  }, [serviceTags]);
+
   const items = useMemo(() => eapItems.filter(i => i.tipo === 'item'), [eapItems]);
 
+  // Counter: items with unit m/m² still without tag
+  const semTagCount = useMemo(() => {
+    const eligible = items.filter(i => i.unidade === 'm' || i.unidade === 'm²');
+    const semTag = eligible.filter(i => !i.tag_id).length;
+    return { semTag, total: eligible.length };
+  }, [items]);
+
   const filtered = useMemo(() => {
-    if (!search) return items;
-    const q = search.toLowerCase();
-    return items.filter(i =>
-      i.descricao.toLowerCase().includes(q) ||
-      i.pacote?.toLowerCase().includes(q) ||
-      i.lote?.toLowerCase().includes(q) ||
-      i.codigo?.toLowerCase().includes(q) ||
-      i.classificacao_adicional?.toLowerCase().includes(q)
-    );
-  }, [items, search]);
+    let list = items;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(i =>
+        i.descricao.toLowerCase().includes(q) ||
+        i.pacote?.toLowerCase().includes(q) ||
+        i.lote?.toLowerCase().includes(q) ||
+        i.codigo?.toLowerCase().includes(q) ||
+        i.classificacao_adicional?.toLowerCase().includes(q)
+      );
+    }
+    if (tagFilter === 'none') {
+      list = list.filter(i => !i.tag_id);
+    } else if (tagFilter !== 'all') {
+      list = list.filter(i => i.tag_id === tagFilter);
+    }
+    return list;
+  }, [items, search, tagFilter]);
 
   // Group by pacote or lote (serviço)
   const grouped = useMemo(() => {
@@ -129,6 +163,28 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSetTag = async (itemId: string, tagId: string | null) => {
+    try {
+      await updateEapItem(itemId, { tag_id: tagId } as any);
+      queryClient.invalidateQueries({ queryKey: ['eap', obraId] });
+      queryClient.invalidateQueries({ queryKey: ['eap-all'] });
+      setOpenTagPopover(null);
+      toast({ title: tagId ? 'Tag atribuída' : 'Tag removida' });
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      const match = msg.match(/Tag .+ requer unidade (\S+)/);
+      if (match) {
+        toast({
+          title: 'Unidade incompatível',
+          description: `Esta tag só pode ser usada em itens com unidade ${match[1]}.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Erro', description: msg, variant: 'destructive' });
+      }
     }
   };
 
@@ -223,6 +279,19 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
               Serviço
             </button>
           </div>
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger className="h-8 text-xs font-body w-[170px] shrink-0">
+              <TagIcon className="h-3.5 w-3.5 mr-1" />
+              <SelectValue placeholder="Filtrar por tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs font-body">Todas as tags</SelectItem>
+              <SelectItem value="none" className="text-xs font-body">Sem tag</SelectItem>
+              {serviceTags.map(t => (
+                <SelectItem key={t.id} value={t.id} className="text-xs font-body">{t.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             size="sm"
             className="h-8 text-xs font-body"
@@ -232,6 +301,21 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
             Novo Item
           </Button>
         </div>
+
+        {/* Tag coverage indicator */}
+        {semTagCount.total > 0 && (
+          <div className={cn(
+            "flex items-center gap-2 text-[11px] font-body px-2 py-1 rounded border",
+            semTagCount.semTag > 0
+              ? "border-destructive/30 bg-destructive/5 text-destructive"
+              : "border-emerald-500/30 bg-emerald-500/5 text-emerald-700"
+          )}>
+            <TagIcon className="h-3 w-3" />
+            <span>
+              <strong>{semTagCount.semTag}</strong> de <strong>{semTagCount.total}</strong> itens com unidade m/m² ainda sem tag atribuída
+            </span>
+          </div>
+        )}
 
         {/* Add item form */}
         {addingItem && (
@@ -432,6 +516,62 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
                                     )}
                                   </div>
                                 </div>
+                                {/* Tag cell */}
+                                {(() => {
+                                  const currentTag = item.tag_id ? tagsById.get(item.tag_id) : null;
+                                  const compatibles = serviceTags.filter(t => t.unidade_permitida === item.unidade);
+                                  if (currentTag) {
+                                    return (
+                                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 shrink-0 font-body">
+                                        <TagIcon className="h-2.5 w-2.5" />
+                                        <span className="truncate max-w-[140px]">{currentTag.nome}</span>
+                                        <button
+                                          onClick={() => handleSetTag(item.id, null)}
+                                          className="hover:text-destructive ml-0.5"
+                                          aria-label="Remover tag"
+                                        >
+                                          <X className="h-2.5 w-2.5" />
+                                        </button>
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Popover
+                                      open={openTagPopover === item.id}
+                                      onOpenChange={(o) => setOpenTagPopover(o ? item.id : null)}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 px-1.5 text-[10px] font-body text-muted-foreground hover:text-foreground shrink-0"
+                                        >
+                                          <TagIcon className="h-2.5 w-2.5 mr-1" />
+                                          + Adicionar tag
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="end" className="w-64 p-1">
+                                        {compatibles.length === 0 ? (
+                                          <div className="text-xs text-muted-foreground font-body p-2">
+                                            Nenhuma tag disponível para a unidade "{item.unidade || '(sem unidade)'}"
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col">
+                                            {compatibles.map(t => (
+                                              <button
+                                                key={t.id}
+                                                onClick={() => handleSetTag(item.id, t.id)}
+                                                className="text-xs font-body text-left px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                                              >
+                                                {t.nome}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </PopoverContent>
+                                    </Popover>
+                                  );
+                                })()}
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0">
                                   <Button
                                     variant="ghost"

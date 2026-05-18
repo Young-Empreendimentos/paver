@@ -4192,6 +4192,7 @@ export type Database = {
           predecessoras: string[] | null
           quantidade: number | null
           sucessoras: string[] | null
+          tag_id: string | null
           tipo: string
           unidade: string | null
         }
@@ -4216,6 +4217,7 @@ export type Database = {
           predecessoras?: string[] | null
           quantidade?: number | null
           sucessoras?: string[] | null
+          tag_id?: string | null
           tipo?: string
           unidade?: string | null
         }
@@ -4240,6 +4242,7 @@ export type Database = {
           predecessoras?: string[] | null
           quantidade?: number | null
           sucessoras?: string[] | null
+          tag_id?: string | null
           tipo?: string
           unidade?: string | null
         }
@@ -4256,6 +4259,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "paver_eap_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paver_eap_items_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "paver_service_tags"
             referencedColumns: ["id"]
           },
         ]
@@ -4389,7 +4399,6 @@ export type Database = {
           preco_total: number
           preco_unitario: number
           quantidade: number
-          tag_id: string | null
           tipo_servico: string | null
           unidade: string | null
         }
@@ -4409,7 +4418,6 @@ export type Database = {
           preco_total?: number
           preco_unitario?: number
           quantidade?: number
-          tag_id?: string | null
           tipo_servico?: string | null
           unidade?: string | null
         }
@@ -4429,7 +4437,6 @@ export type Database = {
           preco_total?: number
           preco_unitario?: number
           quantidade?: number
-          tag_id?: string | null
           tipo_servico?: string | null
           unidade?: string | null
         }
@@ -4446,13 +4453,6 @@ export type Database = {
             columns: ["orcamento_id"]
             isOneToOne: false
             referencedRelation: "paver_orcamentos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "paver_orcamento_itens_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "paver_service_tags"
             referencedColumns: ["id"]
           },
         ]
