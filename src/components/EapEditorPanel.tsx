@@ -302,6 +302,21 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
           </Button>
         </div>
 
+        {/* Tag coverage indicator */}
+        {semTagCount.total > 0 && (
+          <div className={cn(
+            "flex items-center gap-2 text-[11px] font-body px-2 py-1 rounded border",
+            semTagCount.semTag > 0
+              ? "border-destructive/30 bg-destructive/5 text-destructive"
+              : "border-emerald-500/30 bg-emerald-500/5 text-emerald-700"
+          )}>
+            <TagIcon className="h-3 w-3" />
+            <span>
+              <strong>{semTagCount.semTag}</strong> de <strong>{semTagCount.total}</strong> itens com unidade m/m² ainda sem tag atribuída
+            </span>
+          </div>
+        )}
+
         {/* Add item form */}
         {addingItem && (
           <div className="border border-accent/30 rounded-lg p-3 space-y-3 bg-accent/5">
