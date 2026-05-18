@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Activity, Layers, PieChart, CalendarRange } from 'lucide-react';
 import { fetchObras } from '@/services/api';
 import AvancoPorSubgrupos from '@/components/dashboardServicos/AvancoPorSubgrupos';
+import ExecutadoVsTotal from '@/components/dashboardServicos/ExecutadoVsTotal';
 
 const ALL = 'all';
 
