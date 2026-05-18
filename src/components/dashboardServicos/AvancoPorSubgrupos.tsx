@@ -10,7 +10,10 @@ function itemAvanco(item: EapItem): number {
   return Math.max(0, Math.min(100, item.avanco_realizado ?? 0));
 }
 
-const prettyTag = (s: string) => s.replace(/^MO de (execução de )?/i, '').trim();
+const prettyTag = (s: string) => {
+  const t = s.replace(/^MO de (execução de )?/i, '').trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
 
 interface ObraBlockProps {
   obraId: string;
