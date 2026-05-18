@@ -166,6 +166,28 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
     }
   };
 
+  const handleSetTag = async (itemId: string, tagId: string | null) => {
+    try {
+      await updateEapItem(itemId, { tag_id: tagId } as any);
+      queryClient.invalidateQueries({ queryKey: ['eap', obraId] });
+      queryClient.invalidateQueries({ queryKey: ['eap-all'] });
+      setOpenTagPopover(null);
+      toast({ title: tagId ? 'Tag atribuída' : 'Tag removida' });
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      const match = msg.match(/Tag .+ requer unidade (\S+)/);
+      if (match) {
+        toast({
+          title: 'Unidade incompatível',
+          description: `Esta tag só pode ser usada em itens com unidade ${match[1]}.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Erro', description: msg, variant: 'destructive' });
+      }
+    }
+  };
+
   const handleDelete = async (itemId: string) => {
     try {
       await deleteEapItem(itemId);
