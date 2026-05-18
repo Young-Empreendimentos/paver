@@ -133,13 +133,16 @@ export default function ExecutadoPorPeriodo({ obraId }: Props) {
   });
 
   const tagDefs: TagDef[] = useMemo(
-    () => tags.map((t, i) => ({
-      id: t.id,
-      label: t.nome,
-      short: t.nome.replace(/^MO de (execução de )?/i, '').trim(),
-      color: COLORS[i % COLORS.length],
-      unidade: t.unidade_permitida || '',
-    })),
+    () => tags.map((t, i) => {
+      const stripped = t.nome.replace(/^MO de (execução de )?/i, '').trim();
+      return {
+        id: t.id,
+        label: t.nome,
+        short: stripped.charAt(0).toUpperCase() + stripped.slice(1),
+        color: COLORS[i % COLORS.length],
+        unidade: t.unidade_permitida || '',
+      };
+    }),
     [tags],
   );
 
