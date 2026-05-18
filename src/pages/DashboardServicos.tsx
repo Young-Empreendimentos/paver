@@ -9,6 +9,7 @@ import { Activity, Layers, PieChart, CalendarRange } from 'lucide-react';
 import { fetchObras } from '@/services/api';
 import AvancoPorSubgrupos from '@/components/dashboardServicos/AvancoPorSubgrupos';
 import ExecutadoVsTotal from '@/components/dashboardServicos/ExecutadoVsTotal';
+import ExecutadoPorPeriodo from '@/components/dashboardServicos/ExecutadoPorPeriodo';
 
 const ALL = 'all';
 
