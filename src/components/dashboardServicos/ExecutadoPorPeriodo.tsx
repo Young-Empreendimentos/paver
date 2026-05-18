@@ -97,9 +97,13 @@ function buildPeriods(granularity: Granularity, anchor: Date): Period[] {
       const d = addWeeks(anchor, -i);
       const start = startOfWeek(d, { weekStartsOn: 1 });
       const end = endOfWeek(d, { weekStartsOn: 1 });
+      const sameMonth = format(start, 'MM') === format(end, 'MM');
+      const label = sameMonth
+        ? `${format(start, 'd')}–${format(end, 'd/MMM', { locale: ptBR })}`
+        : `${format(start, 'd/MMM', { locale: ptBR })}–${format(end, 'd/MMM', { locale: ptBR })}`;
       periods.push({
         start, end,
-        label: `Sem ${format(start, 'w', { locale: ptBR })}`,
+        label,
         key: format(start, 'yyyy-ww'),
       });
     }
