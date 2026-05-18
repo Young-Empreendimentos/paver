@@ -18,6 +18,7 @@ import {
 
 const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard de Serviços", url: "/dashboard-servicos", icon: Activity },
   { title: "EAP", url: "/eap", icon: FolderTree },
   { title: "Diário de Obra", url: "/diario-obra", icon: ClipboardList },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
