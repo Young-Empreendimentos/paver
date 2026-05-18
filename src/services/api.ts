@@ -37,6 +37,7 @@ export interface EapItem {
   data_fim_prevista?: string;
   data_inicio_real?: string;
   data_fim_real?: string;
+  tag_id?: string | null;
   created_at: string;
 }
 
