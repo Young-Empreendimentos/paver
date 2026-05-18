@@ -81,84 +81,60 @@ function ObraBlock({ obraNome, items }: ObraBlockProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {groupedByServico.map(([servico, servItems]) => {
-          // Build subgroups
-          const buckets: Record<Subgroup, EapItem[]> = { Material: [], 'Serviço': [], Outros: [] };
-          for (const it of servItems) buckets[classify(it)].push(it);
+          const sum = servItems.reduce((s, i) => s + itemAvanco(i), 0);
+          const avg = servItems.length > 0 ? sum / servItems.length : 0;
+          const isOpen = expanded.has(servico);
 
           return (
             <div key={servico} className="border rounded-md">
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b">
-                <Layers className="h-3.5 w-3.5 text-accent shrink-0" />
+              <button
+                className="w-full flex items-center gap-2 text-left px-3 py-2 hover:bg-muted/30 transition-colors"
+                onClick={() => {
+                  setExpanded(prev => {
+                    const n = new Set(prev);
+                    n.has(servico) ? n.delete(servico) : n.add(servico);
+                    return n;
+                  });
+                }}
+              >
+                {isOpen ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+                <Hammer className="h-3.5 w-3.5 text-accent shrink-0" />
                 <span className="text-sm font-heading font-semibold flex-1 truncate">{servico}</span>
-                <Badge variant="secondary" className="text-[10px] font-body">{servItems.length}</Badge>
-              </div>
+                <div className="flex items-center gap-2 w-[55%] max-w-md">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all bg-emerald-500"
+                      style={{ width: `${avg}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-body font-semibold tabular-nums w-10 text-right">
+                    {avg.toFixed(0)}%
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">
+                    ({servItems.length} {servItems.length === 1 ? 'item' : 'itens'})
+                  </span>
+                </div>
+              </button>
 
-              <div className="divide-y">
-                {subgroupOrder.map(sg => {
-                  const subItems = buckets[sg];
-                  if (subItems.length === 0 && sg === 'Outros') return null;
-                  if (subItems.length === 0) return null;
-
-                  const sum = subItems.reduce((s, i) => s + itemAvanco(i), 0);
-                  const avg = subItems.length > 0 ? sum / subItems.length : 0;
-                  const key = `${servico}::${sg}`;
-                  const isOpen = expanded.has(key);
-                  const Icon = subgroupIcon[sg];
-
-                  return (
-                    <div key={sg} className="px-3 py-2">
-                      <button
-                        className="w-full flex items-center gap-2 text-left"
-                        onClick={() => {
-                          setExpanded(prev => {
-                            const n = new Set(prev);
-                            n.has(key) ? n.delete(key) : n.add(key);
-                            return n;
-                          });
-                        }}
-                      >
-                        {isOpen ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-                        <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-xs font-body font-medium w-20 shrink-0">{sg}</span>
-                        <div className="flex-1 min-w-0 flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={cn('h-full rounded-full transition-all', subgroupColor[sg])}
-                              style={{ width: `${avg}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-body font-semibold tabular-nums w-10 text-right">
-                            {avg.toFixed(0)}%
-                          </span>
-                          <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">
-                            ({subItems.length} {subItems.length === 1 ? 'item' : 'itens'})
-                          </span>
-                        </div>
-                      </button>
-
-                      {isOpen && (
-                        <div className="mt-2 ml-8 space-y-1">
-                          {subItems.map(it => {
-                            const av = itemAvanco(it);
-                            return (
-                              <div key={it.id} className="flex items-center gap-2 text-[11px] font-body py-1 px-2 rounded hover:bg-muted/40">
-                                {it.codigo && (
-                                  <span className="text-[10px] text-muted-foreground font-mono shrink-0">{it.codigo}</span>
-                                )}
-                                <span className="flex-1 truncate">{it.descricao}</span>
-                                <span className="text-muted-foreground whitespace-nowrap">
-                                  {(it.quantidade ?? 0).toLocaleString('pt-BR')} {it.unidade || ''}
-                                </span>
-                                <span className="font-semibold tabular-nums w-10 text-right">{av.toFixed(0)}%</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {isOpen && (
+                <div className="border-t px-3 py-2 space-y-1 bg-muted/10">
+                  {servItems.map(it => {
+                    const av = itemAvanco(it);
+                    return (
+                      <div key={it.id} className="flex items-center gap-2 text-[11px] font-body py-1 px-2 rounded hover:bg-muted/40">
+                        {it.codigo && (
+                          <span className="text-[10px] text-muted-foreground font-mono shrink-0">{it.codigo}</span>
+                        )}
+                        <span className="flex-1 truncate">{it.descricao}</span>
+                        <span className="text-muted-foreground whitespace-nowrap">
+                          {(it.quantidade ?? 0).toLocaleString('pt-BR')} {it.unidade || ''}
+                        </span>
+                        <span className="font-semibold tabular-nums w-10 text-right">{av.toFixed(0)}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
