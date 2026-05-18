@@ -31,6 +31,15 @@ interface ObraCardProps {
 }
 
 function ObraCard({ obraNome, items, tags }: ObraCardProps) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => {
+    setExpanded(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -51,10 +60,40 @@ function ObraCard({ obraNome, items, tags }: ObraCardProps) {
           const pct = total > 0 ? (executado / total) * 100 : 0;
           const unidade = tag.unidade_permitida ?? '';
           const empty = matching.length === 0 || total === 0;
+          const isOpen = expanded.has(tag.id);
+
+          // Quebra por pacote (rua/trecho/rotula)
+          const porPacote = new Map<string, { tot: number; exec: number }>();
+          for (const it of matching) {
+            const key = (it.pacote ?? '').trim() || 'Sem rua';
+            const q = it.quantidade ?? 0;
+            const cur = porPacote.get(key) ?? { tot: 0, exec: 0 };
+            cur.tot += q;
+            cur.exec += q * Math.max(0, Math.min(100, it.avanco_realizado ?? 0)) / 100;
+            porPacote.set(key, cur);
+          }
+          const pacotes = Array.from(porPacote.entries())
+            .map(([nome, v]) => ({ nome, ...v, pct: v.tot > 0 ? (v.exec / v.tot) * 100 : 0 }))
+            .sort((a, b) => b.tot - a.tot);
 
           return (
             <div key={tag.id} className="space-y-1">
-              <div className="flex items-center gap-2 text-sm font-body">
+              <button
+                type="button"
+                onClick={() => !empty && toggle(tag.id)}
+                disabled={empty}
+                className={cn(
+                  'w-full flex items-center gap-2 text-sm font-body text-left rounded px-1 -mx-1',
+                  !empty && 'hover:bg-muted/50 cursor-pointer',
+                )}
+              >
+                <ChevronRight
+                  className={cn(
+                    'h-3.5 w-3.5 shrink-0 transition-transform text-muted-foreground',
+                    empty && 'opacity-0',
+                    isOpen && 'rotate-90',
+                  )}
+                />
                 <TagIcon className={cn('h-3.5 w-3.5 shrink-0', palette.icon)} />
                 <span className="font-heading font-semibold w-56 shrink-0 truncate" title={tag.nome}>{prettyTag(tag.nome)}</span>
                 {empty ? (
@@ -68,13 +107,35 @@ function ObraCard({ obraNome, items, tags }: ObraCardProps) {
                     <span className="text-foreground">({fmtPct(pct)}%)</span>
                   </span>
                 )}
-              </div>
+              </button>
               {!empty && (
-                <div className="h-2 bg-muted rounded-full overflow-hidden ml-[232px]">
+                <div className="h-2 bg-muted rounded-full overflow-hidden ml-[254px]">
                   <div
                     className={cn('h-full rounded-full transition-all', palette.bar)}
                     style={{ width: `${Math.min(100, pct)}%` }}
                   />
+                </div>
+              )}
+              {!empty && isOpen && (
+                <div className="ml-[254px] mt-2 mb-3 space-y-1.5">
+                  {pacotes.map(p => (
+                    <div key={p.nome} className="text-xs font-body">
+                      <div className="flex items-center gap-1.5 text-muted-foreground tabular-nums">
+                        <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                        <span className="font-medium text-foreground w-40 shrink-0 truncate" title={p.nome}>{p.nome}</span>
+                        <span>
+                          <span className="text-foreground">{fmtNum(p.exec)}</span> / <span className="text-foreground">{fmtNum(p.tot)}</span> {unidade}
+                          {' '}<span className="text-foreground">({fmtPct(p.pct)}%)</span>
+                        </span>
+                      </div>
+                      <div className="h-1 bg-muted rounded-full overflow-hidden ml-[18px] mt-0.5">
+                        <div
+                          className={cn('h-full rounded-full transition-all', palette.bar)}
+                          style={{ width: `${Math.min(100, p.pct)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
