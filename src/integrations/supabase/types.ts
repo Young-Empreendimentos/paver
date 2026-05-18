@@ -4696,6 +4696,1160 @@ export type Database = {
           },
         ]
       }
+      posvenda_alteracao_campo: {
+        Row: {
+          campo: string
+          data_alteracao: string | null
+          id: number
+          registro_id: number
+          tabela: string
+          usuario_id: number | null
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Insert: {
+          campo: string
+          data_alteracao?: string | null
+          id?: number
+          registro_id: number
+          tabela: string
+          usuario_id?: number | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Update: {
+          campo?: string
+          data_alteracao?: string | null
+          id?: number
+          registro_id?: number
+          tabela?: string
+          usuario_id?: number | null
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posvenda_alteracao_campo_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "posvenda_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posvenda_conferencia_escritura: {
+        Row: {
+          aditivo_assinado_url: string | null
+          agendamento_assinatura: string | null
+          aprovacao: string | null
+          area_bate_contrato: string | null
+          cliente: string | null
+          conferencia_aditivos: string | null
+          conferencia_renegociacoes: string | null
+          conjuge_bate_contrato: string | null
+          contrato_url: string | null
+          data_solicitacao: string | null
+          desistencia: boolean | null
+          empreendimento: string | null
+          id: number
+          indexador_bate_contrato: string | null
+          lote_bate_contrato: string | null
+          matricula_averbada_url: string | null
+          matricula_bate_contrato: string | null
+          minuta_escritura_url: string | null
+          numero_lote: string | null
+          onus_constam: string | null
+          preco_lote_correto: string | null
+          qualificacao_cliente_bate_contrato: string | null
+          relatorio_aditivos_sienge_url: string | null
+          relatorio_contas_a_receber_url: string | null
+          relatorio_contas_recebidas_url: string | null
+          responsavel_interno: string | null
+          status: string | null
+          tipo_escritura: string | null
+          valores_pagos_recebidos: string | null
+        }
+        Insert: {
+          aditivo_assinado_url?: string | null
+          agendamento_assinatura?: string | null
+          aprovacao?: string | null
+          area_bate_contrato?: string | null
+          cliente?: string | null
+          conferencia_aditivos?: string | null
+          conferencia_renegociacoes?: string | null
+          conjuge_bate_contrato?: string | null
+          contrato_url?: string | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          indexador_bate_contrato?: string | null
+          lote_bate_contrato?: string | null
+          matricula_averbada_url?: string | null
+          matricula_bate_contrato?: string | null
+          minuta_escritura_url?: string | null
+          numero_lote?: string | null
+          onus_constam?: string | null
+          preco_lote_correto?: string | null
+          qualificacao_cliente_bate_contrato?: string | null
+          relatorio_aditivos_sienge_url?: string | null
+          relatorio_contas_a_receber_url?: string | null
+          relatorio_contas_recebidas_url?: string | null
+          responsavel_interno?: string | null
+          status?: string | null
+          tipo_escritura?: string | null
+          valores_pagos_recebidos?: string | null
+        }
+        Update: {
+          aditivo_assinado_url?: string | null
+          agendamento_assinatura?: string | null
+          aprovacao?: string | null
+          area_bate_contrato?: string | null
+          cliente?: string | null
+          conferencia_aditivos?: string | null
+          conferencia_renegociacoes?: string | null
+          conjuge_bate_contrato?: string | null
+          contrato_url?: string | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          indexador_bate_contrato?: string | null
+          lote_bate_contrato?: string | null
+          matricula_averbada_url?: string | null
+          matricula_bate_contrato?: string | null
+          minuta_escritura_url?: string | null
+          numero_lote?: string | null
+          onus_constam?: string | null
+          preco_lote_correto?: string | null
+          qualificacao_cliente_bate_contrato?: string | null
+          relatorio_aditivos_sienge_url?: string | null
+          relatorio_contas_a_receber_url?: string | null
+          relatorio_contas_recebidas_url?: string | null
+          responsavel_interno?: string | null
+          status?: string | null
+          tipo_escritura?: string | null
+          valores_pagos_recebidos?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_configuracao_opcao: {
+        Row: {
+          ativo: boolean | null
+          categoria: string
+          created_at: string | null
+          id: number
+          ordem: number | null
+          updated_at: string | null
+          valor: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria: string
+          created_at?: string | null
+          id?: number
+          ordem?: number | null
+          updated_at?: string | null
+          valor: string
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string
+          created_at?: string | null
+          id?: number
+          ordem?: number | null
+          updated_at?: string | null
+          valor?: string
+        }
+        Relationships: []
+      }
+      posvenda_contrato_caixa: {
+        Row: {
+          aprovacao_financeiro: string | null
+          aprovacao_geral: string | null
+          assinatura_cef_data: string | null
+          assinatura_contrato_data: string | null
+          calculo_desconto: number | null
+          comprovante_url: string | null
+          contrato_caixa_url: string | null
+          contratos_internos_url: string | null
+          cpf: string | null
+          empreendimento: string | null
+          id: number
+          imobiliaria: string | null
+          lote: string | null
+          nome_cliente: string | null
+          observacoes: string | null
+          saldo_a_pagar_url: string | null
+          saldo_ccd: number | null
+          status: string | null
+          tipo_contrato: string | null
+          valor_atualizado: number | null
+          valor_contrato: number | null
+          valor_financiamento: number | null
+          valores_pagos_url: string | null
+          vencimento_data: string | null
+        }
+        Insert: {
+          aprovacao_financeiro?: string | null
+          aprovacao_geral?: string | null
+          assinatura_cef_data?: string | null
+          assinatura_contrato_data?: string | null
+          calculo_desconto?: number | null
+          comprovante_url?: string | null
+          contrato_caixa_url?: string | null
+          contratos_internos_url?: string | null
+          cpf?: string | null
+          empreendimento?: string | null
+          id?: number
+          imobiliaria?: string | null
+          lote?: string | null
+          nome_cliente?: string | null
+          observacoes?: string | null
+          saldo_a_pagar_url?: string | null
+          saldo_ccd?: number | null
+          status?: string | null
+          tipo_contrato?: string | null
+          valor_atualizado?: number | null
+          valor_contrato?: number | null
+          valor_financiamento?: number | null
+          valores_pagos_url?: string | null
+          vencimento_data?: string | null
+        }
+        Update: {
+          aprovacao_financeiro?: string | null
+          aprovacao_geral?: string | null
+          assinatura_cef_data?: string | null
+          assinatura_contrato_data?: string | null
+          calculo_desconto?: number | null
+          comprovante_url?: string | null
+          contrato_caixa_url?: string | null
+          contratos_internos_url?: string | null
+          cpf?: string | null
+          empreendimento?: string | null
+          id?: number
+          imobiliaria?: string | null
+          lote?: string | null
+          nome_cliente?: string | null
+          observacoes?: string | null
+          saldo_a_pagar_url?: string | null
+          saldo_ccd?: number | null
+          status?: string | null
+          tipo_contrato?: string | null
+          valor_atualizado?: number | null
+          valor_contrato?: number | null
+          valor_financiamento?: number | null
+          valores_pagos_url?: string | null
+          vencimento_data?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_distrato_nao_registrado: {
+        Row: {
+          altera_sienge: boolean | null
+          aprovacao_geral: string | null
+          aprovacao_inicial_distrato_por: string | null
+          aprovacao_minuta_distrato_por: string | null
+          data_solicitacao: string | null
+          debito_condominio_assoc: number | null
+          debito_iptu: number | null
+          debitos_pagos: boolean | null
+          desistencia_do_distrato: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          lanca_devolucoes_sienge: boolean | null
+          link_calculo_distrato: string | null
+          link_contrato_original: string | null
+          link_distrato_assinado: string | null
+          link_minuta_distrato: string | null
+          motivo: string | null
+          nome_cliente: string | null
+          numero_lote: string | null
+          status: string | null
+        }
+        Insert: {
+          altera_sienge?: boolean | null
+          aprovacao_geral?: string | null
+          aprovacao_inicial_distrato_por?: string | null
+          aprovacao_minuta_distrato_por?: string | null
+          data_solicitacao?: string | null
+          debito_condominio_assoc?: number | null
+          debito_iptu?: number | null
+          debitos_pagos?: boolean | null
+          desistencia_do_distrato?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          lanca_devolucoes_sienge?: boolean | null
+          link_calculo_distrato?: string | null
+          link_contrato_original?: string | null
+          link_distrato_assinado?: string | null
+          link_minuta_distrato?: string | null
+          motivo?: string | null
+          nome_cliente?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Update: {
+          altera_sienge?: boolean | null
+          aprovacao_geral?: string | null
+          aprovacao_inicial_distrato_por?: string | null
+          aprovacao_minuta_distrato_por?: string | null
+          data_solicitacao?: string | null
+          debito_condominio_assoc?: number | null
+          debito_iptu?: number | null
+          debitos_pagos?: boolean | null
+          desistencia_do_distrato?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          lanca_devolucoes_sienge?: boolean | null
+          link_calculo_distrato?: string | null
+          link_contrato_original?: string | null
+          link_distrato_assinado?: string | null
+          link_minuta_distrato?: string | null
+          motivo?: string | null
+          nome_cliente?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_distrato_registrado: {
+        Row: {
+          altera_sienge: boolean | null
+          aprovacao_distrato_inicial_por: string | null
+          aprovacao_minutas_finais_por: string | null
+          atualiza_estoque_legal: boolean | null
+          data_solicitacao: string | null
+          debito_condominio_assoc: number | null
+          debito_iptu: number | null
+          debitos_pagos: boolean | null
+          desistencia_do_processo: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          lanca_devolucoes_sienge: boolean | null
+          link_calculo_distrato: string | null
+          link_contrato_distratado: string | null
+          link_escritura_distrato_assinada: string | null
+          link_matricula_cancelada_averbada: string | null
+          link_minuta_escritura_distrato: string | null
+          link_minuta_procuracao: string | null
+          link_valores_pagos_cliente: string | null
+          motivo: string | null
+          nome_cliente: string | null
+          numero_lote: string | null
+          status: string | null
+        }
+        Insert: {
+          altera_sienge?: boolean | null
+          aprovacao_distrato_inicial_por?: string | null
+          aprovacao_minutas_finais_por?: string | null
+          atualiza_estoque_legal?: boolean | null
+          data_solicitacao?: string | null
+          debito_condominio_assoc?: number | null
+          debito_iptu?: number | null
+          debitos_pagos?: boolean | null
+          desistencia_do_processo?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          lanca_devolucoes_sienge?: boolean | null
+          link_calculo_distrato?: string | null
+          link_contrato_distratado?: string | null
+          link_escritura_distrato_assinada?: string | null
+          link_matricula_cancelada_averbada?: string | null
+          link_minuta_escritura_distrato?: string | null
+          link_minuta_procuracao?: string | null
+          link_valores_pagos_cliente?: string | null
+          motivo?: string | null
+          nome_cliente?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Update: {
+          altera_sienge?: boolean | null
+          aprovacao_distrato_inicial_por?: string | null
+          aprovacao_minutas_finais_por?: string | null
+          atualiza_estoque_legal?: boolean | null
+          data_solicitacao?: string | null
+          debito_condominio_assoc?: number | null
+          debito_iptu?: number | null
+          debitos_pagos?: boolean | null
+          desistencia_do_processo?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          lanca_devolucoes_sienge?: boolean | null
+          link_calculo_distrato?: string | null
+          link_contrato_distratado?: string | null
+          link_escritura_distrato_assinada?: string | null
+          link_matricula_cancelada_averbada?: string | null
+          link_minuta_escritura_distrato?: string | null
+          link_minuta_procuracao?: string | null
+          link_valores_pagos_cliente?: string | null
+          motivo?: string | null
+          nome_cliente?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_leilao: {
+        Row: {
+          aprovacao_direcao: string | null
+          arrematado_leilao1: string | null
+          arrematado_leilao2: string | null
+          averbacao_ata_url: string | null
+          boletos_cancelados: string | null
+          certidao_nao_purgacao_mora_2_url: string | null
+          certidao_nao_purgacao_mora_url: string | null
+          ciente_direcao: string | null
+          cliente: string | null
+          comprovante_devolucao_url: string | null
+          consta_iptu_condominio_edital: string | null
+          contas_a_receber_url: string | null
+          contas_recebidas_url: string | null
+          contrato_url: string | null
+          custo_consolidacao_ri: number | null
+          custo_intimacao_edital: number | null
+          custo_intimacao_ri: number | null
+          custo_itbi: number | null
+          custo_notificacao_leilao_correio: number | null
+          custo_publicacao_edital_intimacao: number | null
+          custo_publicacao_edital_leilao: number | null
+          data_consolidacao: string | null
+          data_inicio_anuncio: string | null
+          data_leilao1: string | null
+          data_leilao2: string | null
+          data_limite_leilao1: string | null
+          empreendimento: string | null
+          guia_consolidacao_url: string | null
+          id: number
+          id_appsheet_consolidacao: string | null
+          id_appsheet_intimacao: string | null
+          intimacao_edital_url: string | null
+          intimacao_status: string | null
+          link_anuncio_jornal_url: string | null
+          link_ata_url: string | null
+          lote: string | null
+          matricula_consolidada_url: string | null
+          nota_entrega: string | null
+          pagamento_condominio_pos: string | null
+          pagamento_iptu_pos: string | null
+          saldo_condominio: number | null
+          saldo_devedor: number | null
+          saldo_iptu: number | null
+          termo_quitacao_url: string | null
+          valor_arrematacao: number | null
+          valor_avaliacao_prefeitura: number | null
+          valor_terreno_corrigido: number | null
+          valor_terreno_original: number | null
+        }
+        Insert: {
+          aprovacao_direcao?: string | null
+          arrematado_leilao1?: string | null
+          arrematado_leilao2?: string | null
+          averbacao_ata_url?: string | null
+          boletos_cancelados?: string | null
+          certidao_nao_purgacao_mora_2_url?: string | null
+          certidao_nao_purgacao_mora_url?: string | null
+          ciente_direcao?: string | null
+          cliente?: string | null
+          comprovante_devolucao_url?: string | null
+          consta_iptu_condominio_edital?: string | null
+          contas_a_receber_url?: string | null
+          contas_recebidas_url?: string | null
+          contrato_url?: string | null
+          custo_consolidacao_ri?: number | null
+          custo_intimacao_edital?: number | null
+          custo_intimacao_ri?: number | null
+          custo_itbi?: number | null
+          custo_notificacao_leilao_correio?: number | null
+          custo_publicacao_edital_intimacao?: number | null
+          custo_publicacao_edital_leilao?: number | null
+          data_consolidacao?: string | null
+          data_inicio_anuncio?: string | null
+          data_leilao1?: string | null
+          data_leilao2?: string | null
+          data_limite_leilao1?: string | null
+          empreendimento?: string | null
+          guia_consolidacao_url?: string | null
+          id?: number
+          id_appsheet_consolidacao?: string | null
+          id_appsheet_intimacao?: string | null
+          intimacao_edital_url?: string | null
+          intimacao_status?: string | null
+          link_anuncio_jornal_url?: string | null
+          link_ata_url?: string | null
+          lote?: string | null
+          matricula_consolidada_url?: string | null
+          nota_entrega?: string | null
+          pagamento_condominio_pos?: string | null
+          pagamento_iptu_pos?: string | null
+          saldo_condominio?: number | null
+          saldo_devedor?: number | null
+          saldo_iptu?: number | null
+          termo_quitacao_url?: string | null
+          valor_arrematacao?: number | null
+          valor_avaliacao_prefeitura?: number | null
+          valor_terreno_corrigido?: number | null
+          valor_terreno_original?: number | null
+        }
+        Update: {
+          aprovacao_direcao?: string | null
+          arrematado_leilao1?: string | null
+          arrematado_leilao2?: string | null
+          averbacao_ata_url?: string | null
+          boletos_cancelados?: string | null
+          certidao_nao_purgacao_mora_2_url?: string | null
+          certidao_nao_purgacao_mora_url?: string | null
+          ciente_direcao?: string | null
+          cliente?: string | null
+          comprovante_devolucao_url?: string | null
+          consta_iptu_condominio_edital?: string | null
+          contas_a_receber_url?: string | null
+          contas_recebidas_url?: string | null
+          contrato_url?: string | null
+          custo_consolidacao_ri?: number | null
+          custo_intimacao_edital?: number | null
+          custo_intimacao_ri?: number | null
+          custo_itbi?: number | null
+          custo_notificacao_leilao_correio?: number | null
+          custo_publicacao_edital_intimacao?: number | null
+          custo_publicacao_edital_leilao?: number | null
+          data_consolidacao?: string | null
+          data_inicio_anuncio?: string | null
+          data_leilao1?: string | null
+          data_leilao2?: string | null
+          data_limite_leilao1?: string | null
+          empreendimento?: string | null
+          guia_consolidacao_url?: string | null
+          id?: number
+          id_appsheet_consolidacao?: string | null
+          id_appsheet_intimacao?: string | null
+          intimacao_edital_url?: string | null
+          intimacao_status?: string | null
+          link_anuncio_jornal_url?: string | null
+          link_ata_url?: string | null
+          lote?: string | null
+          matricula_consolidada_url?: string | null
+          nota_entrega?: string | null
+          pagamento_condominio_pos?: string | null
+          pagamento_iptu_pos?: string | null
+          saldo_condominio?: number | null
+          saldo_devedor?: number | null
+          saldo_iptu?: number | null
+          termo_quitacao_url?: string | null
+          valor_arrematacao?: number | null
+          valor_avaliacao_prefeitura?: number | null
+          valor_terreno_corrigido?: number | null
+          valor_terreno_original?: number | null
+        }
+        Relationships: []
+      }
+      posvenda_notificacao_processo: {
+        Row: {
+          aprovacao_etapa1: string | null
+          aprovacao_etapa2: string | null
+          ar_assinado_url: string | null
+          cancelado_sienge: string | null
+          cliente: string | null
+          contrato_url: string | null
+          empreendimento: string | null
+          envio_correio_info: string | null
+          envio_email_url: string | null
+          envio_whatsapp_url: string | null
+          gatilho_valor: number | null
+          id: number
+          notificacao_1_url: string | null
+          notificacao_2_url: string | null
+          numero_lote: string | null
+          observacoes: string | null
+          pagamento_iptu: string | null
+          prazo_retorno: string | null
+          relatorio_a_receber_url: string | null
+          relatorio_recebidas_url: string | null
+          retorno_no_prazo: string | null
+          status: string | null
+        }
+        Insert: {
+          aprovacao_etapa1?: string | null
+          aprovacao_etapa2?: string | null
+          ar_assinado_url?: string | null
+          cancelado_sienge?: string | null
+          cliente?: string | null
+          contrato_url?: string | null
+          empreendimento?: string | null
+          envio_correio_info?: string | null
+          envio_email_url?: string | null
+          envio_whatsapp_url?: string | null
+          gatilho_valor?: number | null
+          id?: number
+          notificacao_1_url?: string | null
+          notificacao_2_url?: string | null
+          numero_lote?: string | null
+          observacoes?: string | null
+          pagamento_iptu?: string | null
+          prazo_retorno?: string | null
+          relatorio_a_receber_url?: string | null
+          relatorio_recebidas_url?: string | null
+          retorno_no_prazo?: string | null
+          status?: string | null
+        }
+        Update: {
+          aprovacao_etapa1?: string | null
+          aprovacao_etapa2?: string | null
+          ar_assinado_url?: string | null
+          cancelado_sienge?: string | null
+          cliente?: string | null
+          contrato_url?: string | null
+          empreendimento?: string | null
+          envio_correio_info?: string | null
+          envio_email_url?: string | null
+          envio_whatsapp_url?: string | null
+          gatilho_valor?: number | null
+          id?: number
+          notificacao_1_url?: string | null
+          notificacao_2_url?: string | null
+          numero_lote?: string | null
+          observacoes?: string | null
+          pagamento_iptu?: string | null
+          prazo_retorno?: string | null
+          relatorio_a_receber_url?: string | null
+          relatorio_recebidas_url?: string | null
+          retorno_no_prazo?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_renegociacao: {
+        Row: {
+          aditivo_assinado_url: string | null
+          aditivo_averbado_url: string | null
+          aprovacao_calculo: string | null
+          aprovacao_cliente: string | null
+          aprovacao_interna: string | null
+          data_aprovacao_rejeicao: string | null
+          data_atualizacao_gatilho: string | null
+          data_envio_cliente: string | null
+          data_primeira_parcela: string | null
+          data_solicitacao: string | null
+          data_solicitacao_averbacao: string | null
+          empreendimento: string | null
+          gatilho_atingido: string | null
+          id: number
+          id_appsheet: string | null
+          id_helpdesk: string | null
+          link_aditivo_url: string | null
+          link_calculo_url: string | null
+          motivo: string | null
+          nome_cliente: string | null
+          numero_lote: string | null
+          registrado: string | null
+          relatorio_contas_a_receber_url: string | null
+          relatorio_contas_recebidas_url: string | null
+          revisao: string | null
+          status: string | null
+        }
+        Insert: {
+          aditivo_assinado_url?: string | null
+          aditivo_averbado_url?: string | null
+          aprovacao_calculo?: string | null
+          aprovacao_cliente?: string | null
+          aprovacao_interna?: string | null
+          data_aprovacao_rejeicao?: string | null
+          data_atualizacao_gatilho?: string | null
+          data_envio_cliente?: string | null
+          data_primeira_parcela?: string | null
+          data_solicitacao?: string | null
+          data_solicitacao_averbacao?: string | null
+          empreendimento?: string | null
+          gatilho_atingido?: string | null
+          id?: number
+          id_appsheet?: string | null
+          id_helpdesk?: string | null
+          link_aditivo_url?: string | null
+          link_calculo_url?: string | null
+          motivo?: string | null
+          nome_cliente?: string | null
+          numero_lote?: string | null
+          registrado?: string | null
+          relatorio_contas_a_receber_url?: string | null
+          relatorio_contas_recebidas_url?: string | null
+          revisao?: string | null
+          status?: string | null
+        }
+        Update: {
+          aditivo_assinado_url?: string | null
+          aditivo_averbado_url?: string | null
+          aprovacao_calculo?: string | null
+          aprovacao_cliente?: string | null
+          aprovacao_interna?: string | null
+          data_aprovacao_rejeicao?: string | null
+          data_atualizacao_gatilho?: string | null
+          data_envio_cliente?: string | null
+          data_primeira_parcela?: string | null
+          data_solicitacao?: string | null
+          data_solicitacao_averbacao?: string | null
+          empreendimento?: string | null
+          gatilho_atingido?: string | null
+          id?: number
+          id_appsheet?: string | null
+          id_helpdesk?: string | null
+          link_aditivo_url?: string | null
+          link_calculo_url?: string | null
+          motivo?: string | null
+          nome_cliente?: string | null
+          numero_lote?: string | null
+          registrado?: string | null
+          relatorio_contas_a_receber_url?: string | null
+          relatorio_contas_recebidas_url?: string | null
+          revisao?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_titularidade_nao_registrado: {
+        Row: {
+          aprovacao_minutas: string | null
+          data_solicitacao: string | null
+          desistencia: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          informou_financeiro: boolean | null
+          link_contrato_original: string | null
+          link_distrato_assinado: string | null
+          link_novo_contrato_assinado: string | null
+          link_pagamento_taxa: string | null
+          link_valor_a_cobrar: string | null
+          link_valores_a_pagar: string | null
+          link_valores_ja_pagos: string | null
+          minuta_distrato: string | null
+          minuta_novo_contrato: string | null
+          motivo_troca: string | null
+          nome_cliente_atual: string | null
+          novo_titular: string | null
+          numero_lote: string | null
+          status: string | null
+        }
+        Insert: {
+          aprovacao_minutas?: string | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_distrato_assinado?: string | null
+          link_novo_contrato_assinado?: string | null
+          link_pagamento_taxa?: string | null
+          link_valor_a_cobrar?: string | null
+          link_valores_a_pagar?: string | null
+          link_valores_ja_pagos?: string | null
+          minuta_distrato?: string | null
+          minuta_novo_contrato?: string | null
+          motivo_troca?: string | null
+          nome_cliente_atual?: string | null
+          novo_titular?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Update: {
+          aprovacao_minutas?: string | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_distrato_assinado?: string | null
+          link_novo_contrato_assinado?: string | null
+          link_pagamento_taxa?: string | null
+          link_valor_a_cobrar?: string | null
+          link_valores_a_pagar?: string | null
+          link_valores_ja_pagos?: string | null
+          minuta_distrato?: string | null
+          minuta_novo_contrato?: string | null
+          motivo_troca?: string | null
+          nome_cliente_atual?: string | null
+          novo_titular?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_titularidade_nao_registrado_quitado: {
+        Row: {
+          aprovacao_minutas: string | null
+          atualiza_estoque_legal: boolean | null
+          data_solicitacao: string | null
+          desistencia: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          informou_financeiro: boolean | null
+          link_contrato_original: string | null
+          link_escritura_assinada: string | null
+          link_matricula_averbada: string | null
+          link_pagamento_taxa: string | null
+          link_valor_a_cobrar: string | null
+          link_valores_a_pagar: string | null
+          link_valores_ja_pagos: string | null
+          lote_quitado: boolean | null
+          minuta_escritura: string | null
+          motivo_troca: string | null
+          nome_cliente_atual: string | null
+          novo_titular: string | null
+          numero_lote: string | null
+          status: string | null
+        }
+        Insert: {
+          aprovacao_minutas?: string | null
+          atualiza_estoque_legal?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_escritura_assinada?: string | null
+          link_matricula_averbada?: string | null
+          link_pagamento_taxa?: string | null
+          link_valor_a_cobrar?: string | null
+          link_valores_a_pagar?: string | null
+          link_valores_ja_pagos?: string | null
+          lote_quitado?: boolean | null
+          minuta_escritura?: string | null
+          motivo_troca?: string | null
+          nome_cliente_atual?: string | null
+          novo_titular?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Update: {
+          aprovacao_minutas?: string | null
+          atualiza_estoque_legal?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_escritura_assinada?: string | null
+          link_matricula_averbada?: string | null
+          link_pagamento_taxa?: string | null
+          link_valor_a_cobrar?: string | null
+          link_valores_a_pagar?: string | null
+          link_valores_ja_pagos?: string | null
+          lote_quitado?: boolean | null
+          minuta_escritura?: string | null
+          motivo_troca?: string | null
+          nome_cliente_atual?: string | null
+          novo_titular?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_titularidade_registrado: {
+        Row: {
+          aprovacao_minutas: string | null
+          atualiza_estoque_legal: boolean | null
+          data_solicitacao: string | null
+          desistencia: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          informou_financeiro: boolean | null
+          link_contrato_original: string | null
+          link_escritura_assinada: string | null
+          link_matricula_averbada: string | null
+          link_pagamento_taxa: string | null
+          link_valor_a_cobrar: string | null
+          link_valores_a_pagar: string | null
+          link_valores_ja_pagos: string | null
+          minuta_escritura: string | null
+          motivo_troca: string | null
+          nome_cliente_atual: string | null
+          novo_titular: string | null
+          numero_lote: string | null
+          status: string | null
+        }
+        Insert: {
+          aprovacao_minutas?: string | null
+          atualiza_estoque_legal?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_escritura_assinada?: string | null
+          link_matricula_averbada?: string | null
+          link_pagamento_taxa?: string | null
+          link_valor_a_cobrar?: string | null
+          link_valores_a_pagar?: string | null
+          link_valores_ja_pagos?: string | null
+          minuta_escritura?: string | null
+          motivo_troca?: string | null
+          nome_cliente_atual?: string | null
+          novo_titular?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Update: {
+          aprovacao_minutas?: string | null
+          atualiza_estoque_legal?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_escritura_assinada?: string | null
+          link_matricula_averbada?: string | null
+          link_pagamento_taxa?: string | null
+          link_valor_a_cobrar?: string | null
+          link_valores_a_pagar?: string | null
+          link_valores_ja_pagos?: string | null
+          minuta_escritura?: string | null
+          motivo_troca?: string | null
+          nome_cliente_atual?: string | null
+          novo_titular?: string | null
+          numero_lote?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      posvenda_troca_lote_nao_registrado: {
+        Row: {
+          aprovacao_minuta_novo_contrato_por: string | null
+          atualiza_estoque_legal: boolean | null
+          avisar_comercial: boolean | null
+          coletar_assinaturas: boolean | null
+          data_solicitacao: string | null
+          desistencia: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          informou_financeiro: boolean | null
+          link_contrato_original: string | null
+          link_distrato_assinado: string | null
+          link_minuta_novo_contrato: string | null
+          link_novo_contrato_assinado: string | null
+          link_print_calculadora: string | null
+          motivo_troca: string | null
+          nome_cliente: string | null
+          numero_lote_novo: string | null
+          numero_lote_original: string | null
+          status: string | null
+          valor_avista_novo_lote: number | null
+          valor_credito_utilizar: number | null
+          valor_novo_lote_corrigido: number | null
+          valores_a_descontar: number | null
+          valores_ja_pagos_contrato_original: number | null
+        }
+        Insert: {
+          aprovacao_minuta_novo_contrato_por?: string | null
+          atualiza_estoque_legal?: boolean | null
+          avisar_comercial?: boolean | null
+          coletar_assinaturas?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_distrato_assinado?: string | null
+          link_minuta_novo_contrato?: string | null
+          link_novo_contrato_assinado?: string | null
+          link_print_calculadora?: string | null
+          motivo_troca?: string | null
+          nome_cliente?: string | null
+          numero_lote_novo?: string | null
+          numero_lote_original?: string | null
+          status?: string | null
+          valor_avista_novo_lote?: number | null
+          valor_credito_utilizar?: number | null
+          valor_novo_lote_corrigido?: number | null
+          valores_a_descontar?: number | null
+          valores_ja_pagos_contrato_original?: number | null
+        }
+        Update: {
+          aprovacao_minuta_novo_contrato_por?: string | null
+          atualiza_estoque_legal?: boolean | null
+          avisar_comercial?: boolean | null
+          coletar_assinaturas?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_distrato_assinado?: string | null
+          link_minuta_novo_contrato?: string | null
+          link_novo_contrato_assinado?: string | null
+          link_print_calculadora?: string | null
+          motivo_troca?: string | null
+          nome_cliente?: string | null
+          numero_lote_novo?: string | null
+          numero_lote_original?: string | null
+          status?: string | null
+          valor_avista_novo_lote?: number | null
+          valor_credito_utilizar?: number | null
+          valor_novo_lote_corrigido?: number | null
+          valores_a_descontar?: number | null
+          valores_ja_pagos_contrato_original?: number | null
+        }
+        Relationships: []
+      }
+      posvenda_troca_lote_registrado: {
+        Row: {
+          alteracao_reserva_tecnica: boolean | null
+          aprovacao_minuta_escritura_distrato_por: string | null
+          aprovacao_minuta_novo_contrato_por: string | null
+          atualiza_estoque_legal: boolean | null
+          avisar_comercial: boolean | null
+          confirmar_novo_lote_condicoes: boolean | null
+          data_solicitacao: string | null
+          desistencia: boolean | null
+          empreendimento: string | null
+          id: number
+          id_helpdesk: string | null
+          informou_financeiro: boolean | null
+          link_contrato_original: string | null
+          link_distrato_troca_assinado: string | null
+          link_escritura_assinada: string | null
+          link_matricula_averbada: string | null
+          link_novo_contrato_assinado_troca: string | null
+          link_print_calculadora: string | null
+          minuta_escritura_distrato: string | null
+          minuta_novo_contrato_troca: string | null
+          motivo_troca: string | null
+          nome_cliente: string | null
+          numero_lote_novo: string | null
+          numero_lote_original: string | null
+          status: string | null
+          valor_avista_novo_lote: number | null
+          valor_credito_utilizar: number | null
+          valor_novo_lote_corrigido: number | null
+          valores_a_descontar: number | null
+          valores_ja_pagos_contrato_original: number | null
+        }
+        Insert: {
+          alteracao_reserva_tecnica?: boolean | null
+          aprovacao_minuta_escritura_distrato_por?: string | null
+          aprovacao_minuta_novo_contrato_por?: string | null
+          atualiza_estoque_legal?: boolean | null
+          avisar_comercial?: boolean | null
+          confirmar_novo_lote_condicoes?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_distrato_troca_assinado?: string | null
+          link_escritura_assinada?: string | null
+          link_matricula_averbada?: string | null
+          link_novo_contrato_assinado_troca?: string | null
+          link_print_calculadora?: string | null
+          minuta_escritura_distrato?: string | null
+          minuta_novo_contrato_troca?: string | null
+          motivo_troca?: string | null
+          nome_cliente?: string | null
+          numero_lote_novo?: string | null
+          numero_lote_original?: string | null
+          status?: string | null
+          valor_avista_novo_lote?: number | null
+          valor_credito_utilizar?: number | null
+          valor_novo_lote_corrigido?: number | null
+          valores_a_descontar?: number | null
+          valores_ja_pagos_contrato_original?: number | null
+        }
+        Update: {
+          alteracao_reserva_tecnica?: boolean | null
+          aprovacao_minuta_escritura_distrato_por?: string | null
+          aprovacao_minuta_novo_contrato_por?: string | null
+          atualiza_estoque_legal?: boolean | null
+          avisar_comercial?: boolean | null
+          confirmar_novo_lote_condicoes?: boolean | null
+          data_solicitacao?: string | null
+          desistencia?: boolean | null
+          empreendimento?: string | null
+          id?: number
+          id_helpdesk?: string | null
+          informou_financeiro?: boolean | null
+          link_contrato_original?: string | null
+          link_distrato_troca_assinado?: string | null
+          link_escritura_assinada?: string | null
+          link_matricula_averbada?: string | null
+          link_novo_contrato_assinado_troca?: string | null
+          link_print_calculadora?: string | null
+          minuta_escritura_distrato?: string | null
+          minuta_novo_contrato_troca?: string | null
+          motivo_troca?: string | null
+          nome_cliente?: string | null
+          numero_lote_novo?: string | null
+          numero_lote_original?: string | null
+          status?: string | null
+          valor_avista_novo_lote?: number | null
+          valor_credito_utilizar?: number | null
+          valor_novo_lote_corrigido?: number | null
+          valores_a_descontar?: number | null
+          valores_ja_pagos_contrato_original?: number | null
+        }
+        Relationships: []
+      }
+      posvenda_user: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: number
+          is_admin: boolean | null
+          nome: string | null
+          password_hash: string
+          perfil: string | null
+          ultimo_login: string | null
+          username: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: number
+          is_admin?: boolean | null
+          nome?: string | null
+          password_hash: string
+          perfil?: string | null
+          ultimo_login?: string | null
+          username: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: number
+          is_admin?: boolean | null
+          nome?: string | null
+          password_hash?: string
+          perfil?: string | null
+          ultimo_login?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       propostas: {
         Row: {
           arquivo_carta: string | null
