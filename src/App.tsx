@@ -9,6 +9,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Layout } from '@/components/Layout';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const DashboardServicos = lazy(() => import('./pages/DashboardServicos'));
 const Eap = lazy(() => import('./pages/Eap'));
 const Relatorios = lazy(() => import('./pages/Relatorios'));
 const RelatorioFotografico = lazy(() => import('./pages/RelatorioFotografico'));
