@@ -57,6 +57,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard-servicos" element={<DashboardServicos />} />
                 <Route path="/eap" element={<Eap />} />
                 <Route path="/diario-obra" element={<DiarioObra />} />
                 <Route path="/diario-obra/:id" element={<DiarioDetalhe />} />
