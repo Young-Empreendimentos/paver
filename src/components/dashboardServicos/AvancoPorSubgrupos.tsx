@@ -44,9 +44,10 @@ const subgroupColor: Record<Subgroup, string> = {
 function ObraBlock({ obraNome, items }: ObraBlockProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  // Apenas itens de Serviço (mão de obra)
   const groupedByServico = useMemo(() => {
     const map = new Map<string, EapItem[]>();
-    for (const it of items.filter(i => i.tipo === 'item')) {
+    for (const it of items.filter(i => i.tipo === 'item' && classify(i) === 'Serviço')) {
       const key = it.lote || 'Sem serviço';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(it);
