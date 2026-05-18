@@ -14,13 +14,18 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
   Search, Plus, Pencil, Trash2, Save, X, Loader2,
-  ChevronDown, ChevronRight, Package, Layers,
+  ChevronDown, ChevronRight, Package, Layers, Tag as TagIcon,
 } from 'lucide-react';
 import { fetchEapItems, type EapItem } from '@/services/api';
 import { updateEapItem, deleteEapItem, insertSingleEapItem } from '@/services/eapApi';
+import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
 import { cn } from '@/lib/utils';
 
 interface Props {
