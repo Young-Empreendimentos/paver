@@ -27,7 +27,7 @@ function ObraBlock({ obraNome, items, tagsById }: ObraBlockProps) {
   const groupedByServico = useMemo(() => {
     const map = new Map<string, EapItem[]>();
     for (const it of items.filter(i => i.tipo === 'item' && i.tag_id && tagsById.has(i.tag_id))) {
-      const key = tagsById.get(it.tag_id!)!.nome;
+      const key = prettyTag(tagsById.get(it.tag_id!)!.nome);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(it);
     }
