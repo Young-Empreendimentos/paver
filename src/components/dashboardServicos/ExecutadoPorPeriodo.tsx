@@ -40,16 +40,33 @@ interface DiarioRow {
 }
 
 async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
-  const { data, error } = await supabase
-    .from('paver_diario_atividades')
-    .select('quantidade_dia, paver_diarios!inner(data), paver_eap_items!inner(obra_id, tag_id)')
-    .not('paver_eap_items.tag_id', 'is', null);
-  if (error) throw error;
-  return (data || []).map((r: any) => ({
-    quantidade_dia: Number(r.quantidade_dia) || 0,
-    data: r.paver_diarios.data,
-    eap_item: r.paver_eap_items ? { obra_id: r.paver_eap_items.obra_id, tag_id: r.paver_eap_items.tag_id } : null,
-  }));
+  // Sem FKs declaradas → 3 queries + join manual
+  const [atvRes, diariosRes, itemsRes] = await Promise.all([
+    supabase.from('paver_diario_atividades').select('quantidade_dia, diario_id, eap_item_id'),
+    supabase.from('paver_diarios').select('id, data'),
+    supabase.from('paver_eap_items').select('id, obra_id, tag_id').not('tag_id', 'is', null),
+  ]);
+  if (atvRes.error) throw atvRes.error;
+  if (diariosRes.error) throw diariosRes.error;
+  if (itemsRes.error) throw itemsRes.error;
+
+  const diarioById = new Map((diariosRes.data || []).map((d: any) => [d.id, d.data as string]));
+  const itemById = new Map(
+    (itemsRes.data || []).map((i: any) => [i.id, { obra_id: i.obra_id as string, tag_id: i.tag_id as string | null }]),
+  );
+
+  const rows: DiarioRow[] = [];
+  for (const a of (atvRes.data || []) as any[]) {
+    const item = itemById.get(a.eap_item_id);
+    const data = diarioById.get(a.diario_id);
+    if (!item || !data) continue; // só itens com tag e diário válido
+    rows.push({
+      quantidade_dia: Number(a.quantidade_dia) || 0,
+      data,
+      eap_item: item,
+    });
+  }
+  return rows;
 }
 
 interface Props {
