@@ -516,6 +516,62 @@ export default function EapEditorPanel({ open, onOpenChange, obraId, obraNome }:
                                     )}
                                   </div>
                                 </div>
+                                {/* Tag cell */}
+                                {(() => {
+                                  const currentTag = item.tag_id ? tagsById.get(item.tag_id) : null;
+                                  const compatibles = serviceTags.filter(t => t.unidade_permitida === item.unidade);
+                                  if (currentTag) {
+                                    return (
+                                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 gap-1 shrink-0 font-body">
+                                        <TagIcon className="h-2.5 w-2.5" />
+                                        <span className="truncate max-w-[140px]">{currentTag.nome}</span>
+                                        <button
+                                          onClick={() => handleSetTag(item.id, null)}
+                                          className="hover:text-destructive ml-0.5"
+                                          aria-label="Remover tag"
+                                        >
+                                          <X className="h-2.5 w-2.5" />
+                                        </button>
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Popover
+                                      open={openTagPopover === item.id}
+                                      onOpenChange={(o) => setOpenTagPopover(o ? item.id : null)}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-5 px-1.5 text-[10px] font-body text-muted-foreground hover:text-foreground shrink-0"
+                                        >
+                                          <TagIcon className="h-2.5 w-2.5 mr-1" />
+                                          + Adicionar tag
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent align="end" className="w-64 p-1">
+                                        {compatibles.length === 0 ? (
+                                          <div className="text-xs text-muted-foreground font-body p-2">
+                                            Nenhuma tag disponível para a unidade "{item.unidade || '(sem unidade)'}"
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col">
+                                            {compatibles.map(t => (
+                                              <button
+                                                key={t.id}
+                                                onClick={() => handleSetTag(item.id, t.id)}
+                                                className="text-xs font-body text-left px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                                              >
+                                                {t.nome}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </PopoverContent>
+                                    </Popover>
+                                  );
+                                })()}
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0">
                                   <Button
                                     variant="ghost"
