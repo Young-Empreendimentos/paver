@@ -514,13 +514,23 @@ export default function DiarioObraNovoPage() {
     const totalQtd = item.quantidade || 0;
     const currentRealized = item.avanco_realizado || 0;
     const currentQtdRealized = totalQtd * (currentRealized / 100);
-    const newQtdRealized = currentQtdRealized + qtdDia;
+    const restante = Math.max(0, Math.round((totalQtd - currentQtdRealized) * 100) / 100);
+    let capped = Math.max(0, qtdDia);
+    if (totalQtd > 0 && capped > restante) {
+      capped = restante;
+      toast({
+        title: 'Quantidade limitada ao planejado',
+        description: `Restam apenas ${restante} ${item.unidade || 'un'} para este item.`,
+        variant: 'destructive',
+      });
+    }
+    const newQtdRealized = currentQtdRealized + capped;
     const newPercent = totalQtd > 0
       ? Math.min(100, Math.round((newQtdRealized / totalQtd) * 10000) / 100)
       : currentRealized;
     setAtividades(prev => {
       const next = new Map(prev);
-      next.set(item.id, { eap_item_id: item.id, quantidade_dia: qtdDia, avanco_percentual: newPercent });
+      next.set(item.id, { eap_item_id: item.id, quantidade_dia: capped, avanco_percentual: newPercent });
       return next;
     });
   };
@@ -528,12 +538,20 @@ export default function DiarioObraNovoPage() {
   const updatePercentual = (item: EapItem, newPercent: number) => {
     const totalQtd = item.quantidade || 0;
     const currentRealized = item.avanco_realizado || 0;
+    const cappedPercent = Math.min(100, Math.max(0, newPercent));
     const currentQtdRealized = totalQtd * (currentRealized / 100);
-    const newQtdRealized = totalQtd * (newPercent / 100);
+    const newQtdRealized = totalQtd * (cappedPercent / 100);
     const qtdDia = Math.max(0, Math.round((newQtdRealized - currentQtdRealized) * 100) / 100);
+    if (newPercent > 100) {
+      toast({
+        title: 'Percentual limitado a 100%',
+        description: 'Não é possível ultrapassar o total planejado.',
+        variant: 'destructive',
+      });
+    }
     setAtividades(prev => {
       const next = new Map(prev);
-      next.set(item.id, { eap_item_id: item.id, quantidade_dia: qtdDia, avanco_percentual: Math.min(100, newPercent) });
+      next.set(item.id, { eap_item_id: item.id, quantidade_dia: qtdDia, avanco_percentual: cappedPercent });
       return next;
     });
   };
