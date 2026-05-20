@@ -2484,18 +2484,21 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          user_id: string | null
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome: string
+          user_id?: string | null
         }
         Update: {
           ativo?: boolean
           created_at?: string
           id?: string
           nome?: string
+          user_id?: string | null
         }
         Relationships: []
       }
