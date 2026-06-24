@@ -159,7 +159,7 @@ export default function DiarioObraPage() {
       const { data: prof } = await supabase.from('paver_profiles').select('full_name').eq('id', diario.created_by).single();
       const { data: fotosLoc } = await supabase.from('paver_fotos_localizadas').select('foto_url').eq('diario_id', diario.id);
       const allFotoUrls = [...new Set([...(diario.fotos || []), ...(fotosLoc || []).map((f: any) => f.foto_url)])];
-      const fmtDate = (ds: string) => new Date(ds).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+      const fmtDate = (ds: string) => new Date(ds + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
       await exportDiarioPdf({
         data: fmtDate(diario.data),
         obraNome,
@@ -253,7 +253,7 @@ export default function DiarioObraPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="text-sm font-heading font-semibold whitespace-nowrap">
-                          {new Date(diario.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {new Date(diario.data + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                         <Badge variant="outline" className="text-[10px] flex items-center gap-1 shrink-0">
                           <ClimaIcon clima={diario.clima_manha || diario.clima} />
