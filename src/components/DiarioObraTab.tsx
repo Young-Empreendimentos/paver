@@ -218,7 +218,7 @@ export default function DiarioObraTab({ obraId }: DiarioObraTabProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-heading font-semibold">
-                      {new Date(diario.data).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                      {new Date(diario.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
                     </span>
                     <Badge variant="outline" className="text-[10px] flex items-center gap-1">
                       <ClimaIcon clima={diario.clima} />
