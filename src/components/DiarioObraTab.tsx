@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchDiarios, createDiario, deleteDiario, DiarioObra } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateOnlyPtBr, todayDateOnly } from '@/lib/dateOnly';
 
 const climaOptions = [
   { value: 'ensolarado', label: 'Ensolarado', icon: Sun },
@@ -37,7 +38,7 @@ interface DiarioFormData {
 }
 
 const emptyForm: DiarioFormData = {
-  data: new Date().toISOString().split('T')[0],
+  data: todayDateOnly(),
   clima: 'ensolarado',
   temperatura_min: '',
   temperatura_max: '',
@@ -218,7 +219,7 @@ export default function DiarioObraTab({ obraId }: DiarioObraTabProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-heading font-semibold">
-                      {new Date(diario.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                      {formatDateOnlyPtBr(diario.data, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
                     </span>
                     <Badge variant="outline" className="text-[10px] flex items-center gap-1">
                       <ClimaIcon clima={diario.clima} />

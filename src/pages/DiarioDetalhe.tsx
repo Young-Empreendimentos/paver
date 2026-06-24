@@ -14,6 +14,7 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@
 import { fetchObras, fetchEapItems, fetchPlantas, FotoLocalizada, PlantaObra } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { exportDiarioPdf } from '@/lib/exportDiarioPdf';
+import { formatDateOnlyPtBr } from '@/lib/dateOnly';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
 import DxfPlantaViewer from '@/components/DxfPlantaViewer';
 
@@ -164,7 +165,7 @@ export default function DiarioDetalhePage() {
   };
 
   const formatDate = (dateStr: string) =>
-    new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    formatDateOnlyPtBr(dateStr, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 
   const formatCreatedAt = (dateStr: string) =>
     new Date(dateStr).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
