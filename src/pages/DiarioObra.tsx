@@ -253,7 +253,7 @@ export default function DiarioObraPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         <span className="text-sm font-heading font-semibold whitespace-nowrap">
-                          {new Date(diario.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {new Date(diario.data + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                         <Badge variant="outline" className="text-[10px] flex items-center gap-1 shrink-0">
                           <ClimaIcon clima={diario.clima_manha || diario.clima} />
