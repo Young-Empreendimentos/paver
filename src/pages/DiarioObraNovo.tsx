@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
 import DxfParser from 'dxf-parser';
 import { parseDxfToSvg, DxfSvgData } from '@/lib/dxfRenderer';
+import { todayDateOnly } from '@/lib/dateOnly';
 
 const climaOptions = [
   { value: 'ensolarado', label: 'Ensolarado', icon: Sun },
@@ -391,10 +392,7 @@ export default function DiarioObraNovoPage() {
 
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedObraId, setSelectedObraId] = useState(obraIdFromUrl);
-  const [data, setData] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  });
+  const [data, setData] = useState(todayDateOnly);
   const [climaManha, setClimaManha] = useState('ensolarado');
   const [climaTarde, setClimaTarde] = useState('ensolarado');
   const [maoDeObra, setMaoDeObra] = useState('');
