@@ -155,7 +155,16 @@ export default function DiarioObraTab({ obraId }: DiarioObraTabProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="font-body">Data</Label>
-                    <Input type="date" value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} required className="font-body" />
+                    <Input type="date" value={form.data} onChange={e => {
+                      const novaData = e.target.value;
+                      const hoje = todayDateOnly();
+                      if (novaData && novaData !== hoje) {
+                        const [y, m, d] = novaData.split('-');
+                        const ok = window.confirm(`Você está lançando este diário para ${d}/${m}/${y}, diferente de hoje (${hoje.split('-').reverse().join('/')}). Confirmar?`);
+                        if (!ok) return;
+                      }
+                      setForm({ ...form, data: novaData });
+                    }} required className="font-body" />
                   </div>
                   <div className="space-y-2">
                     <Label className="font-body">Clima</Label>
