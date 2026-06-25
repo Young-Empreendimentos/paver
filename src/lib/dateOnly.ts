@@ -1,13 +1,16 @@
 export function parseDateOnly(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 export function formatDateOnlyPtBr(
   dateStr: string,
   options: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
 ): string {
-  return parseDateOnly(dateStr).toLocaleDateString('pt-BR', options);
+  return new Intl.DateTimeFormat('pt-BR', {
+    ...options,
+    timeZone: 'UTC',
+  }).format(parseDateOnly(dateStr));
 }
 
 export function todayDateOnly(): string {
