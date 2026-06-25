@@ -13,7 +13,15 @@ export function formatDateOnlyPtBr(
   }).format(parseDateOnly(dateStr));
 }
 
+// Always returns "today" in America/Sao_Paulo, ignoring the device timezone.
+// Prevents incorrect defaults when a user's device has a wrong/unexpected timezone.
 export function todayDateOnly(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  // en-CA outputs YYYY-MM-DD
+  return parts;
 }
