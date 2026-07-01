@@ -300,6 +300,13 @@ export async function fetchAllUsers(): Promise<UserWithRole[]> {
   }));
 }
 
+export async function createProfile(userId: string, fullName?: string) {
+  const { error } = await supabase
+    .from('paver_profiles')
+    .upsert({ id: userId, full_name: fullName ?? null } as any, { onConflict: 'id' });
+  if (error) throw error;
+}
+
 export async function toggleUserAtivo(userId: string, ativo: boolean) {
   const { error } = await supabase
     .from('paver_profiles')

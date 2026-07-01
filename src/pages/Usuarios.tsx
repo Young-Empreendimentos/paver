@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { fetchAllUsers, assignRole, removeRole, updateProfileName, toggleUserAtivo, UserWithRole } from '@/services/api';
+import { fetchAllUsers, assignRole, removeRole, updateProfileName, toggleUserAtivo, createProfile, UserWithRole } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 
 const roleLabels: Record<string, string> = {
@@ -130,6 +130,13 @@ export default function Usuarios() {
     }
 
     if (data.user) {
+      // Cria o perfil no Paver para o usuário aparecer no portal
+      // (não há trigger no auth.users que preencha paver_profiles).
+      try {
+        await createProfile(data.user.id, newEmail.split('@')[0]);
+      } catch {
+        // Perfil pode já existir; ignorado
+      }
       try {
         await assignRole(data.user.id, newRole);
       } catch {
