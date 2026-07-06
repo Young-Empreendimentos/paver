@@ -323,6 +323,17 @@ export async function assignRole(userId: string, role: string) {
   if (error) throw error;
 }
 
+// Libera o acesso de uma conta auth.users JÁ existente (ex.: quem entrou via Google).
+// Resolve e-mail -> id no servidor, cria o perfil no Paver e atribui a role.
+export async function authorizeUserByEmail(email: string, role: string) {
+  const { data, error } = await supabase.rpc('paver_authorize_user' as any, {
+    p_email: email,
+    p_role: role,
+  } as any);
+  if (error) throw error;
+  return data;
+}
+
 export async function removeRole(userId: string, role: string) {
   const { error } = await supabase
     .from('paver_user_roles')

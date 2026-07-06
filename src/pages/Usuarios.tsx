@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { fetchAllUsers, assignRole, removeRole, updateProfileName, toggleUserAtivo, UserWithRole } from '@/services/api';
+import { fetchAllUsers, assignRole, removeRole, updateProfileName, toggleUserAtivo, authorizeUserByEmail, UserWithRole } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 
 const roleLabels: Record<string, string> = {
@@ -117,33 +117,40 @@ export default function Usuarios() {
     e.preventDefault();
     setCreating(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email: newEmail,
-      password: newPassword,
-      options: { emailRedirectTo: window.location.origin },
-    });
+    try {
+      if (newPassword.trim()) {
+        // Com senha: cria um novo acesso com e-mail e senha.
+        const { data, error } = await supabase.auth.signUp({
+          email: newEmail,
+          password: newPassword,
+          options: { emailRedirectTo: window.location.origin },
+        });
+        if (error) throw error;
 
-    if (error) {
-      toast({ title: 'Erro ao criar usuário', description: error.message, variant: 'destructive' });
-      setCreating(false);
-      return;
-    }
-
-    if (data.user) {
-      try {
-        await assignRole(data.user.id, newRole);
-      } catch {
-        // Role assignment may fail if profile trigger hasn't completed
+        if (data.user) {
+          try {
+            await assignRole(data.user.id, newRole);
+          } catch {
+            // Pode falhar se o perfil ainda não existir; a role pode ser atribuída depois.
+          }
+        }
+        toast({ title: 'Usuário criado!', description: 'O usuário receberá um e-mail de confirmação.' });
+      } else {
+        // Sem senha: libera uma conta que já existe (ex.: quem entrou com Google).
+        await authorizeUserByEmail(newEmail, newRole);
+        toast({ title: 'Usuário liberado!', description: 'O acesso ao Paver foi concedido.' });
       }
-    }
 
-    toast({ title: 'Usuário criado!', description: 'O usuário receberá um e-mail de confirmação.' });
-    queryClient.invalidateQueries({ queryKey: ['users'] });
-    setDialogOpen(false);
-    setNewEmail('');
-    setNewPassword('');
-    setNewRole('engenharia');
-    setCreating(false);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setDialogOpen(false);
+      setNewEmail('');
+      setNewPassword('');
+      setNewRole('engenharia');
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
   };
 
   const renderUserCard = (u: UserWithRole) => (
@@ -237,7 +244,7 @@ export default function Usuarios() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="font-heading">Criar Usuário</DialogTitle>
+              <DialogTitle className="font-heading">Adicionar Usuário</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="space-y-2">
@@ -245,8 +252,11 @@ export default function Usuarios() {
                 <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required className="font-body" />
               </div>
               <div className="space-y-2">
-                <Label className="font-body">Senha</Label>
-                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} className="font-body" />
+                <Label className="font-body">Senha <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={6} className="font-body" placeholder="••••••••" />
+                <p className="text-xs text-muted-foreground font-body">
+                  Deixe em branco para liberar quem já entrou com Google. Preencha só para criar um novo acesso com senha.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label className="font-body">Perfil</Label>
@@ -261,7 +271,7 @@ export default function Usuarios() {
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="font-body">Cancelar</Button>
                 <Button type="submit" disabled={creating} className="bg-accent text-accent-foreground hover:bg-accent/90 font-body">
-                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar'}
+                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Adicionar'}
                 </Button>
               </div>
             </form>
