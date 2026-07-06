@@ -127,13 +127,9 @@ export default function Usuarios() {
         });
         if (error) throw error;
 
-        if (data.user) {
-          try {
-            await assignRole(data.user.id, newRole);
-          } catch {
-            // Pode falhar se o perfil ainda não existir; a role pode ser atribuída depois.
-          }
-        }
+        // Cria perfil + role pela mesma RPC do fluxo sem senha, garantindo que o
+        // usuário criado com senha também apareça na lista (evita perfil órfão).
+        await authorizeUserByEmail(newEmail, newRole);
         toast({ title: 'Usuário criado!', description: 'O usuário receberá um e-mail de confirmação.' });
       } else {
         // Sem senha: libera uma conta que já existe (ex.: quem entrou com Google).
