@@ -28,10 +28,10 @@ function AccessDenied() {
           <ShieldAlert className="h-7 w-7 text-destructive" />
         </div>
         <div className="space-y-1">
-          <h1 className="text-xl font-heading font-bold text-foreground">Acesso não autorizado</h1>
+          <h1 className="text-xl font-heading font-bold text-foreground">Acesso pendente</h1>
           <p className="text-sm text-muted-foreground font-body">
-            Sua conta{user?.email ? ` (${user.email})` : ''} não tem permissão para acessar o Paver.
-            Solicite a um administrador que libere seu acesso.
+            Sua conta{user?.email ? ` (${user.email})` : ''} ainda não tem acesso ao Paver.
+            Seu pedido foi enviado automaticamente e está aguardando aprovação de um administrador.
           </p>
         </div>
         <Button

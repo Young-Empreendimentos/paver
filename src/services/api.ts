@@ -334,6 +334,42 @@ export async function authorizeUserByEmail(email: string, role: string) {
   return data;
 }
 
+// === SOLICITAÇÕES DE ACESSO ===
+export interface AccessRequest {
+  id: string;
+  user_id: string;
+  email?: string;
+  full_name?: string;
+  status: string;
+  requested_at: string;
+}
+
+// Registra automaticamente o pedido de acesso do usuário logado sem role (idempotente).
+export async function registrarSolicitacaoAcesso() {
+  const { error } = await supabase.rpc('paver_registrar_solicitacao_acesso' as any);
+  if (error) throw error;
+}
+
+export async function fetchSolicitacoesPendentes(): Promise<AccessRequest[]> {
+  const { data, error } = await supabase
+    .from('paver_solicitacao_acesso' as any)
+    .select('id, user_id, email, full_name, status, requested_at')
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true });
+  if (error) throw error;
+  return (data as unknown as AccessRequest[]) ?? [];
+}
+
+export async function aprovarSolicitacao(id: string, role: string) {
+  const { error } = await supabase.rpc('paver_aprovar_solicitacao' as any, { p_id: id, p_role: role } as any);
+  if (error) throw error;
+}
+
+export async function recusarSolicitacao(id: string) {
+  const { error } = await supabase.rpc('paver_recusar_solicitacao' as any, { p_id: id } as any);
+  if (error) throw error;
+}
+
 export async function removeRole(userId: string, role: string) {
   const { error } = await supabase
     .from('paver_user_roles')

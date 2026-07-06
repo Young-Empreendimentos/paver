@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { registrarSolicitacaoAcesso } from '@/services/api';
 
 type AppRole = 'admin' | 'engenharia';
 
@@ -39,11 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from('paver_profiles').select('full_name, ativo').eq('id', userId).maybeSingle(),
     ]);
 
-    setRoles((rolesRes.data ?? []).map((r: { role: AppRole }) => r.role));
+    const roleList = (rolesRes.data ?? []).map((r: { role: AppRole }) => r.role);
+    setRoles(roleList);
     setUserName(profileRes.data?.full_name ?? null);
     // Sem linha de perfil não bloqueia (a role é o portão); só bloqueia se ativo === false.
     setAtivo(profileRes.data ? profileRes.data.ativo !== false : true);
     setAccessLoading(false);
+
+    // Logou mas não tem acesso ao Paver: registra o pedido automaticamente (idempotente).
+    if (roleList.length === 0) {
+      registrarSolicitacaoAcesso().catch(() => { /* silencioso: não impede o login */ });
+    }
   };
 
   const resetAccess = () => {

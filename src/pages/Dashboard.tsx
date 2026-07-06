@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { fetchObras, fetchAllEapItems, fetchDiariosThisMonth } from '@/services/api';
 import { useNavigate } from 'react-router-dom';
+import { PendingAccessRequests } from '@/components/PendingAccessRequests';
 
 const statusLabels: Record<string, string> = {
   em_andamento: 'Em andamento',
@@ -86,6 +87,9 @@ export default function Dashboard() {
         <h1 className="text-2xl font-heading font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground font-body">Visão geral dos empreendimentos</p>
       </div>
+
+      {/* Solicitações de acesso pendentes (somente admins) */}
+      <PendingAccessRequests />
 
       {/* Missing dates alerts */}
       {obrasWithMissingDates.length > 0 && (
