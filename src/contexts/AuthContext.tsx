@@ -41,14 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ]);
 
     const roleList = (rolesRes.data ?? []).map((r: { role: AppRole }) => r.role);
+    // Sem linha de perfil não bloqueia (a role é o portão); só bloqueia se ativo === false.
+    const ativoValue = profileRes.data ? profileRes.data.ativo !== false : true;
     setRoles(roleList);
     setUserName(profileRes.data?.full_name ?? null);
-    // Sem linha de perfil não bloqueia (a role é o portão); só bloqueia se ativo === false.
-    setAtivo(profileRes.data ? profileRes.data.ativo !== false : true);
+    setAtivo(ativoValue);
     setAccessLoading(false);
 
-    // Logou mas não tem acesso ao Paver: registra o pedido automaticamente (idempotente).
-    if (roleList.length === 0) {
+    // Logou mas não tem acesso ATIVO (sem role OU perfil inativo): registra/reabre o pedido.
+    // Assim, se um admin desativar a pessoa, o próximo login dela gera a solicitação de novo.
+    if (!(roleList.length > 0 && ativoValue)) {
       registrarSolicitacaoAcesso().catch(() => { /* silencioso: não impede o login */ });
     }
   };

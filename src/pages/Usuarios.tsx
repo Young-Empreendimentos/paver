@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { fetchAllUsers, assignRole, removeRole, updateProfileName, toggleUserAtivo, authorizeUserByEmail, UserWithRole } from '@/services/api';
-import { supabase } from '@/integrations/supabase/client';
 
 const roleLabels: Record<string, string> = {
   admin: 'Administrador',
@@ -28,7 +27,6 @@ export default function Usuarios() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('engenharia');
   const [creating, setCreating] = useState(false);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
@@ -118,29 +116,13 @@ export default function Usuarios() {
     setCreating(true);
 
     try {
-      if (newPassword.trim()) {
-        // Com senha: cria um novo acesso com e-mail e senha.
-        const { data, error } = await supabase.auth.signUp({
-          email: newEmail,
-          password: newPassword,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-
-        // Cria perfil + role pela mesma RPC do fluxo sem senha, garantindo que o
-        // usuário criado com senha também apareça na lista (evita perfil órfão).
-        await authorizeUserByEmail(newEmail, newRole);
-        toast({ title: 'Usuário criado!', description: 'O usuário receberá um e-mail de confirmação.' });
-      } else {
-        // Sem senha: libera uma conta que já existe (ex.: quem entrou com Google).
-        await authorizeUserByEmail(newEmail, newRole);
-        toast({ title: 'Usuário liberado!', description: 'O acesso ao Paver foi concedido.' });
-      }
+      // Login é só via Google: aqui liberamos o acesso de uma conta que já entrou no sistema.
+      await authorizeUserByEmail(newEmail, newRole);
+      toast({ title: 'Usuário liberado!', description: 'O acesso ao Paver foi concedido.' });
 
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setDialogOpen(false);
       setNewEmail('');
-      setNewPassword('');
       setNewRole('engenharia');
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' });
@@ -235,7 +217,7 @@ export default function Usuarios() {
           <DialogTrigger asChild>
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-body">
               <UserPlus className="h-4 w-4 mr-2" />
-              Novo Usuário
+              Liberar Acesso
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -245,13 +227,9 @@ export default function Usuarios() {
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="space-y-2">
                 <Label className="font-body">E-mail</Label>
-                <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required className="font-body" />
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body">Senha <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={6} className="font-body" placeholder="••••••••" />
+                <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required className="font-body" placeholder="pessoa@exemplo.com" />
                 <p className="text-xs text-muted-foreground font-body">
-                  Deixe em branco para liberar quem já entrou com Google. Preencha só para criar um novo acesso com senha.
+                  Libera o acesso de alguém que já entrou com Google ao menos uma vez.
                 </p>
               </div>
               <div className="space-y-2">

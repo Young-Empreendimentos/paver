@@ -1,12 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -20,13 +16,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [mode, setMode] = useState<'login' | 'forgot'>('login');
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleGoogleLogin = async () => {
@@ -52,50 +42,6 @@ export default function Login() {
     // a sessão é capturada pelo AuthContext ao retornar.
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      let description = error.message;
-      if (error.message === 'Invalid login credentials') {
-        description = 'E-mail ou senha inválidos.';
-      } else if (error.message === 'Email not confirmed') {
-        description = 'Seu e-mail ainda não foi confirmado. Entre em contato com o administrador.';
-      }
-      toast({
-        title: 'Erro ao entrar',
-        description,
-        variant: 'destructive',
-      });
-    } else {
-      navigate('/');
-    }
-    setLoading(false);
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-
-    if (error) {
-      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
-    } else {
-      toast({
-        title: 'E-mail enviado',
-        description: 'Verifique sua caixa de entrada para redefinir a senha.',
-      });
-      setMode('login');
-    }
-    setLoading(false);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-6">
@@ -110,121 +56,28 @@ export default function Login() {
 
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-lg font-heading">
-              {mode === 'login' ? 'Acesse sua conta' : 'Recuperar senha'}
-            </CardTitle>
+            <CardTitle className="text-lg font-heading">Acesse sua conta</CardTitle>
             <CardDescription className="font-body">
-              {mode === 'login'
-                ? 'Entre com suas credenciais para continuar'
-                : 'Informe seu e-mail para receber o link de redefinição'}
+              Entre com sua conta Google para continuar
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {mode === 'login' && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGoogleLogin}
-                  disabled={googleLoading || loading}
-                  className="w-full font-body"
-                >
-                  {googleLoading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-                  ) : (
-                    <>
-                      <GoogleIcon className="h-4 w-4 mr-2" />
-                      Continuar com Google
-                    </>
-                  )}
-                </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-card px-2 text-muted-foreground font-body">ou continue com e-mail</span>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <form onSubmit={mode === 'login' ? handleLogin : handleForgotPassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="font-body">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="font-body"
-                />
-              </div>
-
-              {mode === 'login' && (
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="font-body">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="pr-10 font-body"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
+          <CardContent>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading}
+              className="w-full font-body"
+            >
+              {googleLoading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+              ) : (
+                <>
+                  <GoogleIcon className="h-4 w-4 mr-2" />
+                  Continuar com Google
+                </>
               )}
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-body"
-              >
-                {loading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent-foreground border-t-transparent" />
-                ) : mode === 'login' ? (
-                  <>
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Entrar
-                  </>
-                ) : (
-                  'Enviar link'
-                )}
-              </Button>
-
-              <div className="text-center">
-                {mode === 'login' ? (
-                  <button
-                    type="button"
-                    onClick={() => setMode('forgot')}
-                    className="text-sm text-accent hover:underline font-body"
-                  >
-                    Esqueceu sua senha?
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setMode('login')}
-                    className="text-sm text-accent hover:underline font-body"
-                  >
-                    Voltar ao login
-                  </button>
-                )}
-              </div>
-            </form>
+            </Button>
           </CardContent>
         </Card>
       </div>
