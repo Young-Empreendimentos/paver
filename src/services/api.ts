@@ -33,6 +33,8 @@ export interface EapItem {
   avanco_base?: number;
   avanco_previsto?: number;
   avanco_realizado?: number;
+  /** Soma de quantidade_dia dos diários (quantidade executada), calculada ao vivo. */
+  executado?: number;
   ordem?: number;
   data_inicio_prevista?: string;
   data_fim_prevista?: string;
@@ -127,7 +129,7 @@ async function enrichWithComputedAvanco(items: EapItem[], obraId?: string): Prom
     const avanco = totalQtd > 0
       ? Math.min(100, Math.round((sumQtdDia / totalQtd) * 10000) / 100)
       : 0;
-    return { ...item, avanco_realizado: avanco };
+    return { ...item, avanco_realizado: avanco, executado: sumQtdDia };
   });
 }
 

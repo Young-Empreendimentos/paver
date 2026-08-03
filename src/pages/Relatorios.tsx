@@ -75,9 +75,15 @@ export default function Relatorios() {
   }, [filteredItems, groupMode]);
 
   const totalItems = filteredItems.length;
-  const avgBase = totalItems > 0 ? filteredItems.reduce((s, i) => s + (i.avanco_base || 0), 0) / totalItems : 0;
-  const avgPrevisto = totalItems > 0 ? filteredItems.reduce((s, i) => s + (i.avanco_previsto || 0), 0) / totalItems : 0;
   const avgRealizado = totalItems > 0 ? filteredItems.reduce((s, i) => s + (i.avanco_realizado || 0), 0) / totalItems : 0;
+  const concluidos = filteredItems.filter(i => (i.avanco_realizado || 0) >= 100).length;
+
+  // Formata quantidade com no máx. 2 casas (sem zeros à toa) + unidade
+  const fmtQtd = (v?: number, un?: string) => {
+    const n = v || 0;
+    const str = Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, '');
+    return un ? `${str} ${un}` : str;
+  };
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups(prev => {
@@ -89,7 +95,7 @@ export default function Relatorios() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Obra', 'Código', 'Descrição', 'Pacote', 'Tipo Serviço', 'Unidade', 'Qtd', 'Base %', 'Previsto %', 'Realizado %'];
+    const headers = ['Obra', 'Código', 'Descrição', 'Pacote', 'Tipo Serviço', 'Unidade', 'Qtd. Prevista', 'Qtd. Executada', 'Realizado %'];
     const rows = filteredItems.map(item => [
       obraMap[item.obra_id]?.nome || '',
       item.codigo || '',
@@ -98,8 +104,7 @@ export default function Relatorios() {
       item.lote || '',
       item.unidade || '',
       String(item.quantidade || 0),
-      String(item.avanco_base || 0),
-      String(item.avanco_previsto || 0),
+      String(item.executado || 0),
       String(item.avanco_realizado || 0),
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
@@ -263,7 +268,7 @@ export default function Relatorios() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground font-body">Itens de Serviço</p>
@@ -272,20 +277,11 @@ export default function Relatorios() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground font-body">Avanço Base</p>
-            <div className="flex items-center gap-3">
-              <p className="text-2xl font-bold font-heading">{avgBase.toFixed(1)}%</p>
-              <Progress value={avgBase} className="flex-1" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground font-body">Avanço Previsto</p>
-            <div className="flex items-center gap-3">
-              <p className="text-2xl font-bold font-heading">{avgPrevisto.toFixed(1)}%</p>
-              <Progress value={avgPrevisto} className="flex-1" />
-            </div>
+            <p className="text-sm text-muted-foreground font-body">Itens Concluídos</p>
+            <p className="text-2xl font-bold font-heading">
+              {concluidos}
+              <span className="text-sm font-body text-muted-foreground"> / {totalItems}</span>
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -358,8 +354,8 @@ export default function Relatorios() {
                           <TableHead className="font-heading">
                             {groupMode === 'pacote' ? 'Tipo Serviço' : 'Pacote'}
                           </TableHead>
-                          <TableHead className="font-heading text-right">Base</TableHead>
-                          <TableHead className="font-heading text-right">Previsto</TableHead>
+                          <TableHead className="font-heading text-right">Qtd. Prevista</TableHead>
+                          <TableHead className="font-heading text-right">Qtd. Executada</TableHead>
                           <TableHead className="font-heading text-right">Realizado</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -374,8 +370,8 @@ export default function Relatorios() {
                                 : (item.pacote ? <Badge variant="outline" className="text-[10px]">{item.pacote}</Badge> : '—')
                               }
                             </TableCell>
-                            <TableCell className="text-right font-body text-sm">{(item.avanco_base || 0).toFixed(1)}%</TableCell>
-                            <TableCell className="text-right font-body text-sm">{(item.avanco_previsto || 0).toFixed(1)}%</TableCell>
+                            <TableCell className="text-right font-body text-sm">{fmtQtd(item.quantidade, item.unidade)}</TableCell>
+                            <TableCell className="text-right font-body text-sm">{fmtQtd(item.executado, item.unidade)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <Progress value={item.avanco_realizado || 0} className="w-16 h-1.5" />
