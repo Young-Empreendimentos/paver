@@ -33,9 +33,13 @@ export default function Relatorios() {
     queryFn: fetchAllEapItems,
   });
 
+  // Itens com quantidade 0 (diâmetro/serviço que não existe naquela rua) não têm
+  // nada a executar; contá-los como 0% distorcia a média pra baixo. Ficam de fora
+  // do relatório (continuam na EAP/orçamento).
+  const withQty = allEapItems.filter(i => (i.quantidade ?? 0) > 0);
   const obraFiltered = selectedObra === 'all'
-    ? allEapItems
-    : allEapItems.filter(i => i.obra_id === selectedObra);
+    ? withQty
+    : withQty.filter(i => i.obra_id === selectedObra);
 
   const uniquePacotes = useMemo(() => {
     const set = new Set<string>();
