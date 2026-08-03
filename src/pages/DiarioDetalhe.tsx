@@ -13,6 +13,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { fetchObras, fetchEapItems, fetchPlantas, FotoLocalizada, PlantaObra } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
+import { paverDb } from '@/integrations/supabase/paver';
 import { exportDiarioPdf } from '@/lib/exportDiarioPdf';
 import { formatDateOnlyPtBr } from '@/lib/dateOnly';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
@@ -54,7 +55,7 @@ export default function DiarioDetalhePage() {
   const { data: diario, isLoading } = useQuery({
     queryKey: ['diario-detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await paverDb
         .from('paver_diarios')
         .select('*')
         .eq('id', id!)
@@ -82,7 +83,7 @@ export default function DiarioDetalhePage() {
   const { data: atividades = [] } = useQuery({
     queryKey: ['diario-atividades', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await paverDb
         .from('paver_diario_atividades')
         .select('*')
         .eq('diario_id', id!);
@@ -107,7 +108,7 @@ export default function DiarioDetalhePage() {
   const { data: profileName } = useQuery({
     queryKey: ['paver-profile', diario?.created_by],
     queryFn: async () => {
-      const { data } = await supabase.from('paver_profiles').select('full_name').eq('id', diario!.created_by).single();
+      const { data } = await paverDb.from('paver_profiles').select('full_name').eq('id', diario!.created_by).single();
       return data?.full_name || 'Sem nome';
     },
     enabled: !!diario?.created_by,
@@ -117,7 +118,7 @@ export default function DiarioDetalhePage() {
   const { data: fotosLocalizadas = [] } = useQuery({
     queryKey: ['fotos-localizadas-diario', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await paverDb
         .from('paver_fotos_localizadas')
         .select('*')
         .eq('diario_id', id!)

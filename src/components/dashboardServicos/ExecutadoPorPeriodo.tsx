@@ -13,7 +13,8 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 import { fetchServiceTags, type ServiceTag } from '@/services/serviceTagsApi';
 
 type Granularity = 'week' | 'month';
@@ -38,9 +39,9 @@ interface DiarioRow {
 
 async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
   const [atvRes, diariosRes, itemsRes] = await Promise.all([
-    supabase.from('paver_diario_atividades').select('quantidade_dia, diario_id, eap_item_id'),
-    supabase.from('paver_diarios').select('id, data'),
-    supabase.from('paver_eap_items').select('id, obra_id, tag_id').not('tag_id', 'is', null),
+    paverDb.from('paver_diario_atividades').select('quantidade_dia, diario_id, eap_item_id'),
+    paverDb.from('paver_diarios').select('id, data'),
+    paverDb.from('paver_eap_items').select('id, obra_id, tag_id').not('tag_id', 'is', null),
   ]);
   if (atvRes.error) throw atvRes.error;
   if (diariosRes.error) throw diariosRes.error;

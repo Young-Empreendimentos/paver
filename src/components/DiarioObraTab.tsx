@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchDiarios, createDiario, deleteDiario, DiarioObra } from '@/services/api';
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 import { formatDateOnlyPtBr, todayDateOnly } from '@/lib/dateOnly';
 
 const climaOptions = [
@@ -71,7 +72,7 @@ export default function DiarioObraTab({ obraId }: DiarioObraTabProps) {
     queryKey: ['paver-profiles', userIds],
     queryFn: async () => {
       if (userIds.length === 0) return {};
-      const { data } = await supabase
+      const { data } = await paverDb
         .from('paver_profiles')
         .select('id, full_name')
         .in('id', userIds);

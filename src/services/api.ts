@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { paverDb } from '@/integrations/supabase/paver';
 
 export interface Obra {
   id: string;
@@ -60,7 +61,7 @@ export interface DiarioObra {
 
 // === OBRAS ===
 export async function fetchObras() {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_obras')
     .select('*')
     .order('created_at', { ascending: false });
@@ -69,7 +70,7 @@ export async function fetchObras() {
 }
 
 export async function fetchObra(id: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_obras')
     .select('*')
     .eq('id', id)
@@ -79,7 +80,7 @@ export async function fetchObra(id: string) {
 }
 
 export async function createObra(obra: Omit<Obra, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_obras')
     .insert(obra)
     .select()
@@ -89,7 +90,7 @@ export async function createObra(obra: Omit<Obra, 'id' | 'created_at' | 'updated
 }
 
 export async function updateObra(id: string, updates: Partial<Obra>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_obras')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
@@ -100,7 +101,7 @@ export async function updateObra(id: string, updates: Partial<Obra>) {
 }
 
 export async function deleteObra(id: string) {
-  const { error } = await supabase.from('paver_obras').delete().eq('id', id);
+  const { error } = await paverDb.from('paver_obras').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -131,7 +132,7 @@ async function enrichWithComputedAvanco(items: EapItem[], obraId?: string): Prom
 }
 
 export async function fetchEapItems(obraId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_items')
     .select('*')
     .eq('obra_id', obraId)
@@ -141,7 +142,7 @@ export async function fetchEapItems(obraId: string) {
 }
 
 export async function fetchAllEapItems() {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_items')
     .select('*')
     .eq('tipo', 'item');
@@ -150,7 +151,7 @@ export async function fetchAllEapItems() {
 }
 
 export async function insertEapItems(items: Omit<EapItem, 'id' | 'created_at'>[]) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_items')
     .insert(items)
     .select();
@@ -159,13 +160,13 @@ export async function insertEapItems(items: Omit<EapItem, 'id' | 'created_at'>[]
 }
 
 export async function deleteEapItemsByObra(obraId: string) {
-  const { error } = await supabase.from('paver_eap_items').delete().eq('obra_id', obraId);
+  const { error } = await paverDb.from('paver_eap_items').delete().eq('obra_id', obraId);
   if (error) throw error;
 }
 
 // === DIÁRIO DE OBRA ===
 export async function fetchDiarios(obraId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_diarios')
     .select('*')
     .eq('obra_id', obraId)
@@ -175,7 +176,7 @@ export async function fetchDiarios(obraId: string) {
 }
 
 export async function fetchAllDiarios() {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_diarios')
     .select('*')
     .order('data', { ascending: false });
@@ -186,7 +187,7 @@ export async function fetchAllDiarios() {
 export async function fetchDiariosThisMonth() {
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_diarios')
     .select('*')
     .gte('data', firstDay);
@@ -195,7 +196,7 @@ export async function fetchDiariosThisMonth() {
 }
 
 export async function createDiario(diario: Omit<DiarioObra, 'id' | 'created_at'>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_diarios')
     .insert(diario)
     .select()
@@ -205,7 +206,7 @@ export async function createDiario(diario: Omit<DiarioObra, 'id' | 'created_at'>
 }
 
 export async function updateDiario(id: string, updates: Partial<DiarioObra>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_diarios')
     .update(updates)
     .eq('id', id)
@@ -217,7 +218,7 @@ export async function updateDiario(id: string, updates: Partial<DiarioObra>) {
 
 export async function deleteDiario(id: string) {
   // 1. Get all atividades for this diário before deleting
-  const { data: atividades } = await supabase
+  const { data: atividades } = await paverDb
     .from('paver_diario_atividades')
     .select('eap_item_id')
     .eq('diario_id', id);
@@ -225,18 +226,18 @@ export async function deleteDiario(id: string) {
   const affectedItemIds = [...new Set((atividades || []).map((a: any) => a.eap_item_id))];
 
   // 2. Delete the diário (cascades to paver_diario_atividades)
-  const { error } = await supabase.from('paver_diarios').delete().eq('id', id);
+  const { error } = await paverDb.from('paver_diarios').delete().eq('id', id);
   if (error) throw error;
 
   // 3. Update data_inicio_real / data_fim_real for affected items (avanco_realizado is computed dynamically)
   for (const itemId of affectedItemIds) {
-    const { data: eapItem } = await supabase
+    const { data: eapItem } = await paverDb
       .from('paver_eap_items')
       .select('quantidade')
       .eq('id', itemId)
       .single();
 
-    const { data: remaining } = await supabase
+    const { data: remaining } = await paverDb
       .from('paver_diario_atividades')
       .select('quantidade_dia')
       .eq('eap_item_id', itemId);
@@ -257,7 +258,7 @@ export async function deleteDiario(id: string) {
     }
 
     if (Object.keys(updateFields).length > 0) {
-      await supabase.from('paver_eap_items').update(updateFields).eq('id', itemId);
+      await paverDb.from('paver_eap_items').update(updateFields).eq('id', itemId);
     }
   }
 }
@@ -272,12 +273,12 @@ export interface UserWithRole {
 }
 
 export async function fetchAllUsers(): Promise<UserWithRole[]> {
-  const { data: profiles, error: pErr } = await supabase
+  const { data: profiles, error: pErr } = await paverDb
     .from('paver_profiles')
     .select('id, full_name, ativo');
   if (pErr) throw pErr;
 
-  const { data: roles, error: rErr } = await supabase
+  const { data: roles, error: rErr } = await paverDb
     .from('paver_user_roles')
     .select('user_id, role');
   if (rErr) throw rErr;
@@ -301,7 +302,7 @@ export async function fetchAllUsers(): Promise<UserWithRole[]> {
 }
 
 export async function toggleUserAtivo(userId: string, ativo: boolean) {
-  const { error } = await supabase
+  const { error } = await paverDb
     .from('paver_profiles')
     .update({ ativo } as any)
     .eq('id', userId);
@@ -309,7 +310,7 @@ export async function toggleUserAtivo(userId: string, ativo: boolean) {
 }
 
 export async function updateProfileName(userId: string, name: string) {
-  const { error } = await supabase
+  const { error } = await paverDb
     .from('paver_profiles')
     .update({ full_name: name } as any)
     .eq('id', userId);
@@ -317,7 +318,7 @@ export async function updateProfileName(userId: string, name: string) {
 }
 
 export async function assignRole(userId: string, role: string) {
-  const { error } = await supabase
+  const { error } = await paverDb
     .from('paver_user_roles')
     .insert({ user_id: userId, role: role as any });
   if (error) throw error;
@@ -351,7 +352,7 @@ export async function registrarSolicitacaoAcesso() {
 }
 
 export async function fetchSolicitacoesPendentes(): Promise<AccessRequest[]> {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_solicitacao_acesso' as any)
     .select('id, user_id, email, full_name, status, requested_at')
     .eq('status', 'pending')
@@ -371,7 +372,7 @@ export async function recusarSolicitacao(id: string) {
 }
 
 export async function removeRole(userId: string, role: string) {
-  const { error } = await supabase
+  const { error } = await paverDb
     .from('paver_user_roles')
     .delete()
     .eq('user_id', userId)
@@ -404,7 +405,7 @@ export interface FotoLocalizada {
 }
 
 export async function fetchPlantas(obraId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_plantas')
     .select('*')
     .eq('obra_id', obraId)
@@ -414,7 +415,7 @@ export async function fetchPlantas(obraId: string) {
 }
 
 export async function createPlanta(planta: Omit<PlantaObra, 'id' | 'created_at'>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_plantas')
     .insert(planta)
     .select()
@@ -424,12 +425,12 @@ export async function createPlanta(planta: Omit<PlantaObra, 'id' | 'created_at'>
 }
 
 export async function deletePlanta(id: string) {
-  const { error } = await supabase.from('paver_plantas').delete().eq('id', id);
+  const { error } = await paverDb.from('paver_plantas').delete().eq('id', id);
   if (error) throw error;
 }
 
 export async function fetchFotosLocalizadas(plantaId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_fotos_localizadas')
     .select('*')
     .eq('planta_id', plantaId)
@@ -439,7 +440,7 @@ export async function fetchFotosLocalizadas(plantaId: string) {
 }
 
 export async function fetchAllFotosLocalizadas() {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_fotos_localizadas')
     .select('*')
     .order('created_at', { ascending: false });
@@ -448,7 +449,7 @@ export async function fetchAllFotosLocalizadas() {
 }
 
 export async function createFotoLocalizada(foto: Omit<FotoLocalizada, 'id' | 'created_at'>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_fotos_localizadas')
     .insert(foto)
     .select()
@@ -458,7 +459,7 @@ export async function createFotoLocalizada(foto: Omit<FotoLocalizada, 'id' | 'cr
 }
 
 export async function deleteFotoLocalizada(id: string) {
-  const { error } = await supabase.from('paver_fotos_localizadas').delete().eq('id', id);
+  const { error } = await paverDb.from('paver_fotos_localizadas').delete().eq('id', id);
   if (error) throw error;
 }
 

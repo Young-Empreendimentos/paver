@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 
 export interface ServiceTag {
   id: string;
@@ -8,7 +9,7 @@ export interface ServiceTag {
 }
 
 export async function fetchServiceTags(): Promise<ServiceTag[]> {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_service_tags' as any)
     .select('*')
     .order('nome');

@@ -32,7 +32,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { fetchEapItems, fetchObras } from '@/services/api';
 import { bulkUpdateEapItems, calculateDependencyDates } from '@/services/eapApi';
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 import type { EapItem } from '@/services/api';
 
 const BaselineManager = lazy(() => import('@/components/BaselineManager'));
@@ -126,7 +127,7 @@ export default function LinhaBalancoPage() {
   const { data: lastDiarioDate } = useQuery({
     queryKey: ['last-diario-date', selectedObra],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await paverDb
         .from('paver_diarios')
         .select('data')
         .eq('obra_id', selectedObra)

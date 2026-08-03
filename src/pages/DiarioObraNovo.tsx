@@ -23,7 +23,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra } from '@/services/api';
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
 import DxfParser from 'dxf-parser';
 import { parseDxfToSvg, DxfSvgData } from '@/lib/dxfRenderer';
@@ -705,7 +706,7 @@ export default function DiarioObraNovoPage() {
       }
 
       if (atividadesArr.length > 0) {
-        const { error } = await supabase.from('paver_diario_atividades').insert(atividadesArr.map(a => ({
+        const { error } = await paverDb.from('paver_diario_atividades').insert(atividadesArr.map(a => ({
           diario_id: diario.id, eap_item_id: a.eap_item_id, avanco_percentual: a.avanco_percentual, quantidade_dia: a.quantidade_dia,
         })));
         if (error) throw error;
@@ -715,7 +716,7 @@ export default function DiarioObraNovoPage() {
           const item = eapItensOnly.find(i => i.id === a.eap_item_id);
           const totalQtd = item?.quantidade || 0;
 
-          const { data: allMeasurements } = await supabase
+          const { data: allMeasurements } = await paverDb
             .from('paver_diario_atividades')
             .select('quantidade_dia')
             .eq('eap_item_id', a.eap_item_id);
@@ -738,7 +739,7 @@ export default function DiarioObraNovoPage() {
           }
 
           if (Object.keys(updateFields).length > 0) {
-            const { error: updErr } = await supabase.from('paver_eap_items').update(updateFields).eq('id', a.eap_item_id);
+            const { error: updErr } = await paverDb.from('paver_eap_items').update(updateFields).eq('id', a.eap_item_id);
             if (updErr) console.error('Failed to update EAP item:', updErr);
           }
         }

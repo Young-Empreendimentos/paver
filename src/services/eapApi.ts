@@ -1,9 +1,10 @@
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 import type { EapItem } from '@/services/api';
 
 // === UPDATE EAP ITEM ===
 export async function updateEapItem(id: string, updates: Partial<EapItem>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_items')
     .update(updates as any)
     .eq('id', id)
@@ -15,13 +16,13 @@ export async function updateEapItem(id: string, updates: Partial<EapItem>) {
 
 // === DELETE SINGLE EAP ITEM ===
 export async function deleteEapItem(id: string) {
-  const { error } = await supabase.from('paver_eap_items').delete().eq('id', id);
+  const { error } = await paverDb.from('paver_eap_items').delete().eq('id', id);
   if (error) throw error;
 }
 
 // === INSERT SINGLE EAP ITEM ===
 export async function insertSingleEapItem(item: Omit<EapItem, 'id' | 'created_at'>) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_items')
     .insert(item)
     .select()
@@ -34,7 +35,7 @@ export async function insertSingleEapItem(item: Omit<EapItem, 'id' | 'created_at
 export async function bulkUpdateEapItems(items: { id: string; updates: Partial<EapItem> }[]) {
   const results = [];
   for (const item of items) {
-    const { data, error } = await supabase
+    const { data, error } = await paverDb
       .from('paver_eap_items')
       .update(item.updates as any)
       .eq('id', item.id)
@@ -66,7 +67,7 @@ export interface EapBaselineItem {
 }
 
 export async function fetchBaselines(obraId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_baselines')
     .select('*')
     .eq('obra_id', obraId)
@@ -76,7 +77,7 @@ export async function fetchBaselines(obraId: string) {
 }
 
 export async function fetchBaselineItems(baselineId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_eap_baseline_items')
     .select('*')
     .eq('baseline_id', baselineId);
@@ -86,7 +87,7 @@ export async function fetchBaselineItems(baselineId: string) {
 
 export async function createBaseline(obraId: string, nome: string, userId: string, eapItems: EapItem[]) {
   // Create baseline
-  const { data: baseline, error: bErr } = await supabase
+  const { data: baseline, error: bErr } = await paverDb
     .from('paver_eap_baselines')
     .insert({ obra_id: obraId, nome, created_by: userId })
     .select()
@@ -105,7 +106,7 @@ export async function createBaseline(obraId: string, nome: string, userId: strin
     }));
 
   if (items.length > 0) {
-    const { error: iErr } = await supabase
+    const { error: iErr } = await paverDb
       .from('paver_eap_baseline_items')
       .insert(items);
     if (iErr) throw iErr;
@@ -115,7 +116,7 @@ export async function createBaseline(obraId: string, nome: string, userId: strin
 }
 
 export async function deleteBaseline(id: string) {
-  const { error } = await supabase.from('paver_eap_baselines').delete().eq('id', id);
+  const { error } = await paverDb.from('paver_eap_baselines').delete().eq('id', id);
   if (error) throw error;
 }
 

@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+
+import { paverDb } from '@/integrations/supabase/paver';
 
 export type DependencyRuleType = 'servico_em_pacote' | 'pacote_em_servico';
 
@@ -13,7 +14,7 @@ export interface DependencyRule {
 }
 
 export async function fetchDependencyRules(obraId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_dependency_rules' as any)
     .select('*')
     .eq('obra_id', obraId)
@@ -29,7 +30,7 @@ export async function createDependencyRule(
   successor: string,
   userId: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await paverDb
     .from('paver_dependency_rules' as any)
     .insert({ obra_id: obraId, tipo, predecessor, successor, created_by: userId } as any)
     .select()
@@ -39,7 +40,7 @@ export async function createDependencyRule(
 }
 
 export async function deleteDependencyRule(id: string) {
-  const { error } = await supabase
+  const { error } = await paverDb
     .from('paver_dependency_rules' as any)
     .delete()
     .eq('id', id);

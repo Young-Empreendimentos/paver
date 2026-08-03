@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchObras, fetchAllDiarios, deleteDiario, fetchEapItems, DiarioObra } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
+import { paverDb } from '@/integrations/supabase/paver';
 import { exportDiarioPdf } from '@/lib/exportDiarioPdf';
 import { formatDateOnlyPtBr } from '@/lib/dateOnly';
 
@@ -69,7 +70,7 @@ export default function DiarioObraPage() {
       const chunks: string[][] = [];
       for (let i = 0; i < allDiarioIds.length; i += 200) chunks.push(allDiarioIds.slice(i, i + 200));
       const results = await Promise.all(chunks.map(async chunk => {
-        const { data } = await supabase.from('paver_diario_atividades').select('diario_id, eap_item_id').in('diario_id', chunk);
+        const { data } = await paverDb.from('paver_diario_atividades').select('diario_id, eap_item_id').in('diario_id', chunk);
         return data || [];
       }));
       return results.flat() as { diario_id: string; eap_item_id: string }[];
@@ -86,7 +87,7 @@ export default function DiarioObraPage() {
       const chunks: string[][] = [];
       for (let i = 0; i < eapItemIds.length; i += 200) chunks.push(eapItemIds.slice(i, i + 200));
       const results = await Promise.all(chunks.map(async chunk => {
-        const { data } = await supabase.from('paver_eap_items').select('id, descricao').in('id', chunk);
+        const { data } = await paverDb.from('paver_eap_items').select('id, descricao').in('id', chunk);
         return data || [];
       }));
       const map: Record<string, string> = {};
@@ -111,7 +112,7 @@ export default function DiarioObraPage() {
       const chunks: string[][] = [];
       for (let i = 0; i < allDiarioIds.length; i += 200) chunks.push(allDiarioIds.slice(i, i + 200));
       const results = await Promise.all(chunks.map(async chunk => {
-        const { data } = await supabase.from('paver_fotos_localizadas').select('diario_id').in('diario_id', chunk);
+        const { data } = await paverDb.from('paver_fotos_localizadas').select('diario_id').in('diario_id', chunk);
         return data || [];
       }));
       const map: Record<string, number> = {};
@@ -126,7 +127,7 @@ export default function DiarioObraPage() {
     queryKey: ['paver-profiles', userIds],
     queryFn: async () => {
       if (userIds.length === 0) return {};
-      const { data } = await supabase.from('paver_profiles').select('id, full_name').in('id', userIds);
+      const { data } = await paverDb.from('paver_profiles').select('id, full_name').in('id', userIds);
       const map: Record<string, string> = {};
       (data || []).forEach((p: any) => { map[p.id] = p.full_name || 'Sem nome'; });
       return map;
@@ -150,15 +151,15 @@ export default function DiarioObraPage() {
     setExportingId(diario.id);
     try {
       const obraNome = obrasMap.get(diario.obra_id) || 'Obra';
-      const { data: ativs } = await supabase.from('paver_diario_atividades').select('*').eq('diario_id', diario.id);
+      const { data: ativs } = await paverDb.from('paver_diario_atividades').select('*').eq('diario_id', diario.id);
       const atividadesList = ativs || [];
       const eapItems = await fetchEapItems(diario.obra_id);
       const eapItensOnly = eapItems.filter(i => i.tipo === 'item');
       const localEapMap = new Map(eapItensOnly.map(i => [i.id, i]));
       const { data: sums } = await supabase.rpc('get_eap_avanco_sums', { p_obra_id: diario.obra_id });
       const localAvancoMap = new Map((sums || []).map((r: any) => [r.eap_item_id, Number(r.sum_quantidade_dia)]));
-      const { data: prof } = await supabase.from('paver_profiles').select('full_name').eq('id', diario.created_by).single();
-      const { data: fotosLoc } = await supabase.from('paver_fotos_localizadas').select('foto_url').eq('diario_id', diario.id);
+      const { data: prof } = await paverDb.from('paver_profiles').select('full_name').eq('id', diario.created_by).single();
+      const { data: fotosLoc } = await paverDb.from('paver_fotos_localizadas').select('foto_url').eq('diario_id', diario.id);
       const allFotoUrls = [...new Set([...(diario.fotos || []), ...(fotosLoc || []).map((f: any) => f.foto_url)])];
       const fmtDate = (ds: string) => formatDateOnlyPtBr(ds, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
       await exportDiarioPdf({

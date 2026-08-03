@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { paverDb } from '@/integrations/supabase/paver';
 import { registrarSolicitacaoAcesso } from '@/services/api';
 
 type AppRole = 'admin' | 'engenharia';
@@ -36,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadAccess = async (userId: string) => {
     setAccessLoading(true);
     const [rolesRes, profileRes] = await Promise.all([
-      supabase.from('paver_user_roles').select('role').eq('user_id', userId),
-      supabase.from('paver_profiles').select('full_name, ativo').eq('id', userId).maybeSingle(),
+      paverDb.from('paver_user_roles').select('role').eq('user_id', userId),
+      paverDb.from('paver_profiles').select('full_name, ativo').eq('id', userId).maybeSingle(),
     ]);
 
     const roleList = (rolesRes.data ?? []).map((r: { role: AppRole }) => r.role);

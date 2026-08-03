@@ -40,6 +40,7 @@ import {
   OrcamentoItem,
 } from '@/lib/csvOrcamentoParser';
 import { supabase } from '@/integrations/supabase/client';
+import { paverDb } from '@/integrations/supabase/paver';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
@@ -533,7 +534,7 @@ export default function ImportOrcamentoWizard({ open, onOpenChange, obraId, onIm
       const arquivoUrl = urlData.publicUrl;
 
       // 2. Create orcamento record
-      const { data: orcamento, error: orcError } = await supabase
+      const { data: orcamento, error: orcError } = await paverDb
         .from('paver_orcamentos' as any)
         .insert({
           obra_id: obraId,
@@ -574,14 +575,14 @@ export default function ImportOrcamentoWizard({ open, onOpenChange, obraId, onIm
 
       for (let i = 0; i < itemsToInsert.length; i += batchSize) {
         const batch = itemsToInsert.slice(i, i + batchSize);
-        const { error: batchError } = await supabase
+        const { error: batchError } = await paverDb
           .from('paver_orcamento_itens' as any)
           .insert(batch);
         if (batchError) throw batchError;
       }
 
       // 4. Also insert into EAP for backward compatibility
-      await supabase.from('paver_eap_items').delete().eq('obra_id', obraId);
+      await paverDb.from('paver_eap_items').delete().eq('obra_id', obraId);
 
       let ordem = 0;
       const eapItems: any[] = [];
@@ -629,7 +630,7 @@ export default function ImportOrcamentoWizard({ open, onOpenChange, obraId, onIm
       if (eapItems.length > 0) {
         for (let i = 0; i < eapItems.length; i += batchSize) {
           const batch = eapItems.slice(i, i + batchSize);
-          const { error: eapError } = await supabase.from('paver_eap_items').insert(batch);
+          const { error: eapError } = await paverDb.from('paver_eap_items').insert(batch);
           if (eapError) throw eapError;
         }
       }
