@@ -429,7 +429,12 @@ export default function DiarioObraNovoPage() {
     enabled: !!selectedObraId,
   });
 
-  const eapItensOnly = useMemo(() => eapItems.filter(i => i.tipo === 'item'), [eapItems]);
+  // Só itens com quantidade prevista > 0 podem receber lançamento; itens com
+  // quantidade 0 (diâmetro/serviço que não existe naquela rua) não aparecem no diário.
+  const eapItensOnly = useMemo(
+    () => eapItems.filter(i => i.tipo === 'item' && (i.quantidade ?? 0) > 0),
+    [eapItems],
+  );
 
   // Build parent map for hierarchy breadcrumb
   const parentMap = useMemo(() => {
