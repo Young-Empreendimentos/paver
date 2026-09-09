@@ -1,3 +1,5 @@
+import CelebracaoVenda from "@/components/CelebracaoVenda";
+import { supabase } from "@/integrations/supabase/client";
 import { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
@@ -49,6 +51,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CelebracaoVenda supabase={supabase} sistema="Paver" somUrl="/sons/venda-celebracao.mp3" />
       <BrowserRouter>
         <AuthProvider>
           <Suspense fallback={<AppLoadingFallback />}>
