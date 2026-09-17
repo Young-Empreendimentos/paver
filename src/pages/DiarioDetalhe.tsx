@@ -18,6 +18,7 @@ import { exportDiarioPdf } from '@/lib/exportDiarioPdf';
 import { formatDateOnlyPtBr } from '@/lib/dateOnly';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
 import DxfPlantaViewer from '@/components/DxfPlantaViewer';
+import { EmpregadoAvatar } from '@/components/EmpregadoAvatar';
 
 const climaOptions = [
   { value: 'ensolarado', label: 'Ensolarado', icon: Sun },
@@ -287,11 +288,12 @@ export default function DiarioDetalhePage() {
           {diarioEmpregados.length > 0 && (
             <div className="pt-2 border-t border-border/50">
               <span className="text-xs font-body text-muted-foreground">Empregados presentes ({diarioEmpregados.length})</span>
-              <div className="flex flex-wrap gap-1.5 mt-1">
+              <div className="flex flex-wrap gap-2 mt-1.5">
                 {diarioEmpregados.map(de => (
-                  <Badge key={de.empregado_id} variant="secondary" className="font-body text-[11px]">
-                    {de.paver_empregados?.nome_completo || 'Empregado'}
-                  </Badge>
+                  <span key={de.empregado_id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 py-0.5 pl-0.5 pr-2.5">
+                    <EmpregadoAvatar path={de.paver_empregados?.foto_path} size={24} />
+                    <span className="font-body text-xs">{de.paver_empregados?.nome_completo || 'Empregado'}</span>
+                  </span>
                 ))}
               </div>
             </div>

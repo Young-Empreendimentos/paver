@@ -26,6 +26,7 @@ import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocali
 
 import { paverDb } from '@/integrations/supabase/paver';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
+import { EmpregadoAvatar } from '@/components/EmpregadoAvatar';
 import DxfParser from 'dxf-parser';
 import { parseDxfToSvg, DxfSvgData } from '@/lib/dxfRenderer';
 import { todayDateOnly } from '@/lib/dateOnly';
@@ -435,10 +436,10 @@ export default function DiarioObraNovoPage() {
   // Empregados ativos agrupados por empreiteiro (para o seletor de presentes)
   const empregadosPorEmpreiteiro = useMemo(() => {
     const nomeById = new Map(empreiteiros.map(e => [e.id, e.razao_social]));
-    const groups = new Map<string, { nome: string; itens: typeof todosEmpregados }>();
+    const groups = new Map<string, { id: string; nome: string; itens: typeof todosEmpregados }>();
     for (const emp of todosEmpregados.filter(e => e.ativo)) {
       if (!groups.has(emp.empreiteiro_id)) {
-        groups.set(emp.empreiteiro_id, { nome: nomeById.get(emp.empreiteiro_id) || 'Sem empreiteiro', itens: [] });
+        groups.set(emp.empreiteiro_id, { id: emp.empreiteiro_id, nome: nomeById.get(emp.empreiteiro_id) || 'Sem empreiteiro', itens: [] });
       }
       groups.get(emp.empreiteiro_id)!.itens.push(emp);
     }
@@ -446,6 +447,13 @@ export default function DiarioObraNovoPage() {
   }, [empreiteiros, todosEmpregados]);
 
   const totalEmpregadosAtivos = useMemo(() => todosEmpregados.filter(e => e.ativo).length, [todosEmpregados]);
+
+  const [expandedEmpr, setExpandedEmpr] = useState<Set<string>>(new Set());
+  const toggleEmprGroup = (id: string) => setExpandedEmpr(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
 
   const toggleEmpregado = (id: string) => setEmpregadosSel(prev => {
     const n = new Set(prev);
@@ -976,20 +984,38 @@ export default function DiarioObraNovoPage() {
                 Nenhum empregado ativo cadastrado — cadastre em <span className="font-medium">Empreiteiros</span>.
               </p>
             ) : (
-              <div className="rounded-md border border-border divide-y max-h-56 overflow-y-auto">
-                {empregadosPorEmpreiteiro.map(g => (
-                  <div key={g.nome} className="p-2">
-                    <p className="text-[11px] font-medium text-muted-foreground font-body mb-1">{g.nome}</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                      {g.itens.map(emp => (
-                        <label key={emp.id} className="flex items-center gap-2 text-sm font-body cursor-pointer py-0.5">
-                          <Checkbox checked={empregadosSel.has(emp.id)} onCheckedChange={() => toggleEmpregado(emp.id)} />
-                          <span className="truncate">{emp.nome_completo}</span>
-                        </label>
-                      ))}
+              <div className="rounded-md border border-border divide-y max-h-72 overflow-y-auto">
+                {empregadosPorEmpreiteiro.map(g => {
+                  const selInGroup = g.itens.filter(e => empregadosSel.has(e.id)).length;
+                  const open = expandedEmpr.has(g.id);
+                  return (
+                    <div key={g.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleEmprGroup(g.id)}
+                        className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/40 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5 font-body text-sm font-medium">
+                          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                          {g.nome}
+                          <span className="text-xs text-muted-foreground">({g.itens.length})</span>
+                        </span>
+                        {selInGroup > 0 && <Badge variant="secondary" className="text-[10px]">{selInGroup} marcado(s)</Badge>}
+                      </button>
+                      {open && (
+                        <div className="px-3 pb-2 space-y-1">
+                          {g.itens.map(emp => (
+                            <label key={emp.id} className="flex items-center gap-2 py-1 px-1 rounded cursor-pointer hover:bg-muted/30">
+                              <Checkbox checked={empregadosSel.has(emp.id)} onCheckedChange={() => toggleEmpregado(emp.id)} />
+                              <EmpregadoAvatar path={emp.foto_path} size={32} />
+                              <span className="font-body text-sm truncate">{emp.nome_completo}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
