@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { fetchObras, fetchEapItems, fetchPlantas, FotoLocalizada, PlantaObra } from '@/services/api';
+import { fetchObras, fetchEapItems, fetchPlantas, fetchDiarioEmpregados, FotoLocalizada, PlantaObra } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { paverDb } from '@/integrations/supabase/paver';
 import { exportDiarioPdf } from '@/lib/exportDiarioPdf';
@@ -90,6 +90,13 @@ export default function DiarioDetalhePage() {
       if (error) throw error;
       return data as DiarioAtividade[];
     },
+    enabled: !!id,
+  });
+
+  // Empregados vinculados a este diário (Fase 2)
+  const { data: diarioEmpregados = [] } = useQuery({
+    queryKey: ['diario-empregados', id],
+    queryFn: () => fetchDiarioEmpregados(id!),
     enabled: !!id,
   });
 
@@ -276,6 +283,19 @@ export default function DiarioDetalhePage() {
               <p className="text-sm font-body mt-0.5">{diario.mao_de_obra || '—'}</p>
             </div>
           </div>
+
+          {diarioEmpregados.length > 0 && (
+            <div className="pt-2 border-t border-border/50">
+              <span className="text-xs font-body text-muted-foreground">Empregados presentes ({diarioEmpregados.length})</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {diarioEmpregados.map(de => (
+                  <Badge key={de.empregado_id} variant="secondary" className="font-body text-[11px]">
+                    {de.paver_empregados?.nome_completo || 'Empregado'}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-4 pt-2 border-t border-border/50">
             <span className="flex items-center gap-1 text-xs text-muted-foreground font-body">

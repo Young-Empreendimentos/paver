@@ -595,3 +595,26 @@ export async function deleteEmpregado(id: string) {
   const { error } = await paverDb.from('paver_empregados' as any).delete().eq('id', id);
   if (error) throw error;
 }
+
+// Vínculo empregado ↔ diário (Fase 2)
+export interface DiarioEmpregadoLink {
+  empregado_id: string;
+  paver_empregados: { nome_completo: string; empreiteiro_id: string } | null;
+}
+
+export async function fetchDiarioEmpregados(diarioId: string) {
+  const { data, error } = await paverDb
+    .from('paver_diario_empregados' as any)
+    .select('empregado_id, paver_empregados(nome_completo, empreiteiro_id)')
+    .eq('diario_id', diarioId);
+  if (error) throw error;
+  return (data || []) as unknown as DiarioEmpregadoLink[];
+}
+
+export async function insertDiarioEmpregados(diarioId: string, empregadoIds: string[]) {
+  if (empregadoIds.length === 0) return;
+  const { error } = await paverDb
+    .from('paver_diario_empregados' as any)
+    .insert(empregadoIds.map(id => ({ diario_id: diarioId, empregado_id: id })) as any);
+  if (error) throw error;
+}

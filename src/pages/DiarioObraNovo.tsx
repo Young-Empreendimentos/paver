@@ -22,7 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra } from '@/services/api';
+import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, insertDiarioEmpregados } from '@/services/api';
 
 import { paverDb } from '@/integrations/supabase/paver';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
@@ -397,6 +397,7 @@ export default function DiarioObraNovoPage() {
   const [climaManha, setClimaManha] = useState('ensolarado');
   const [climaTarde, setClimaTarde] = useState('ensolarado');
   const [maoDeObra, setMaoDeObra] = useState('');
+  const [empregadosSel, setEmpregadosSel] = useState<Set<string>>(new Set());
   const [observacoes, setObservacoes] = useState('');
   const [atividades, setAtividades] = useState<Map<string, AtividadeEntry>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -427,6 +428,29 @@ export default function DiarioObraNovoPage() {
     queryKey: ['plantas', selectedObraId],
     queryFn: () => fetchPlantas(selectedObraId),
     enabled: !!selectedObraId,
+  });
+  const { data: empreiteiros = [] } = useQuery({ queryKey: ['empreiteiros'], queryFn: fetchEmpreiteiros });
+  const { data: todosEmpregados = [] } = useQuery({ queryKey: ['empregados-all'], queryFn: fetchAllEmpregados });
+
+  // Empregados ativos agrupados por empreiteiro (para o seletor de presentes)
+  const empregadosPorEmpreiteiro = useMemo(() => {
+    const nomeById = new Map(empreiteiros.map(e => [e.id, e.razao_social]));
+    const groups = new Map<string, { nome: string; itens: typeof todosEmpregados }>();
+    for (const emp of todosEmpregados.filter(e => e.ativo)) {
+      if (!groups.has(emp.empreiteiro_id)) {
+        groups.set(emp.empreiteiro_id, { nome: nomeById.get(emp.empreiteiro_id) || 'Sem empreiteiro', itens: [] });
+      }
+      groups.get(emp.empreiteiro_id)!.itens.push(emp);
+    }
+    return [...groups.values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [empreiteiros, todosEmpregados]);
+
+  const totalEmpregadosAtivos = useMemo(() => todosEmpregados.filter(e => e.ativo).length, [todosEmpregados]);
+
+  const toggleEmpregado = (id: string) => setEmpregadosSel(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
   });
 
   // Só itens com quantidade prevista > 0 podem receber lançamento; itens com
@@ -694,6 +718,11 @@ export default function DiarioObraNovoPage() {
         observacoes: observacoes || undefined, created_by: user!.id,
       } as any);
 
+      // Empregados presentes (Fase 2)
+      if (empregadosSel.size > 0) {
+        await insertDiarioEmpregados(diario.id, Array.from(empregadosSel));
+      }
+
       // Create paver_fotos_localizadas for pinned files
       for (const { url, foto } of uploadedFotos) {
         if (foto.pinned && foto.plantaId && foto.posX != null && foto.posY != null) {
@@ -934,6 +963,35 @@ export default function DiarioObraNovoPage() {
           <div className="space-y-2">
             <Label className="font-body">Equipes / Mão de Obra</Label>
             <Textarea value={maoDeObra} onChange={e => setMaoDeObra(e.target.value)} rows={3} placeholder="Ex: 2 pedreiros, 1 encanador, 3 serventes..." className="font-body" />
+          </div>
+
+          {/* Empregados presentes (opcional) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="font-body">Empregados presentes (opcional)</Label>
+              {empregadosSel.size > 0 && <Badge variant="secondary" className="font-body">{empregadosSel.size} selecionado(s)</Badge>}
+            </div>
+            {totalEmpregadosAtivos === 0 ? (
+              <p className="text-xs text-muted-foreground font-body">
+                Nenhum empregado ativo cadastrado — cadastre em <span className="font-medium">Empreiteiros</span>.
+              </p>
+            ) : (
+              <div className="rounded-md border border-border divide-y max-h-56 overflow-y-auto">
+                {empregadosPorEmpreiteiro.map(g => (
+                  <div key={g.nome} className="p-2">
+                    <p className="text-[11px] font-medium text-muted-foreground font-body mb-1">{g.nome}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                      {g.itens.map(emp => (
+                        <label key={emp.id} className="flex items-center gap-2 text-sm font-body cursor-pointer py-0.5">
+                          <Checkbox checked={empregadosSel.has(emp.id)} onCheckedChange={() => toggleEmpregado(emp.id)} />
+                          <span className="truncate">{emp.nome_completo}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* EAP Tree */}
