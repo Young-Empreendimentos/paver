@@ -474,3 +474,124 @@ export async function uploadFile(bucket: string, path: string, file: File) {
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
   return urlData.publicUrl;
 }
+
+// === Empreiteiros / Empregados (cadastro) ===
+// Bucket PRIVADO: guardamos o path e exibimos via URL assinada (getSignedUrl).
+export const EMPREITEIROS_BUCKET = 'paver-empreiteiros';
+
+/** Sobe para um bucket privado e retorna o PATH (não a URL pública). */
+export async function uploadPrivateFile(bucket: string, path: string, file: File) {
+  const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+    cacheControl: '3600',
+    upsert: true,
+  });
+  if (error) throw error;
+  return data.path;
+}
+
+/** Gera uma URL temporária (assinada) para exibir/baixar um arquivo privado. */
+export async function getSignedUrl(bucket: string, path: string, expiresIn = 300) {
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function removeStorageFile(bucket: string, path: string) {
+  const { error } = await supabase.storage.from(bucket).remove([path]);
+  if (error) throw error;
+}
+
+export interface Empreiteiro {
+  id: string;
+  razao_social: string;
+  cnpj?: string | null;
+  contrato_path?: string | null;
+  contrato_nome?: string | null;
+  ativo: boolean;
+  created_by: string;
+  created_at: string;
+}
+
+export interface Empregado {
+  id: string;
+  empreiteiro_id: string;
+  nome_completo: string;
+  cpf?: string | null;
+  rg?: string | null;
+  telefone?: string | null;
+  foto_path?: string | null;
+  documento_path?: string | null;
+  ativo: boolean;
+  created_by: string;
+  created_at: string;
+}
+
+export async function fetchEmpreiteiros() {
+  const { data, error } = await paverDb
+    .from('paver_empreiteiros' as any)
+    .select('*')
+    .order('razao_social', { ascending: true });
+  if (error) throw error;
+  return (data || []) as unknown as Empreiteiro[];
+}
+
+export async function createEmpreiteiro(e: Omit<Empreiteiro, 'id' | 'created_at'>) {
+  const { data, error } = await paverDb
+    .from('paver_empreiteiros' as any)
+    .insert(e as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as Empreiteiro;
+}
+
+export async function updateEmpreiteiro(id: string, updates: Partial<Empreiteiro>) {
+  const { data, error } = await paverDb
+    .from('paver_empreiteiros' as any)
+    .update(updates as any)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as Empreiteiro;
+}
+
+export async function deleteEmpreiteiro(id: string) {
+  const { error } = await paverDb.from('paver_empreiteiros' as any).delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchAllEmpregados() {
+  const { data, error } = await paverDb
+    .from('paver_empregados' as any)
+    .select('*')
+    .order('nome_completo', { ascending: true });
+  if (error) throw error;
+  return (data || []) as unknown as Empregado[];
+}
+
+export async function createEmpregado(e: Omit<Empregado, 'id' | 'created_at'>) {
+  const { data, error } = await paverDb
+    .from('paver_empregados' as any)
+    .insert(e as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as Empregado;
+}
+
+export async function updateEmpregado(id: string, updates: Partial<Empregado>) {
+  const { data, error } = await paverDb
+    .from('paver_empregados' as any)
+    .update(updates as any)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as Empregado;
+}
+
+export async function deleteEmpregado(id: string) {
+  const { error } = await paverDb.from('paver_empregados' as any).delete().eq('id', id);
+  if (error) throw error;
+}

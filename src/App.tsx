@@ -22,6 +22,7 @@ const DiarioObra = lazy(() => import('./pages/DiarioObra'));
 const DiarioDetalhe = lazy(() => import('./pages/DiarioDetalhe'));
 const DiarioObraNovo = lazy(() => import('./pages/DiarioObraNovo'));
 const AdminObras = lazy(() => import('./pages/AdminObras'));
+const Empreiteiros = lazy(() => import('./pages/Empreiteiros'));
 const Usuarios = lazy(() => import('./pages/Usuarios'));
 const Login = lazy(() => import('./pages/Login'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/relatorio-fotografico" element={<RelatorioFotografico />} />
                 <Route path="/linha-balanco" element={<LinhaBalancoPage />} />
                 <Route path="/datas-eap" element={<DatasEap />} />
+                <Route path="/empreiteiros" element={<Empreiteiros />} />
                 <Route
                   path="/admin/obras"
                   element={(
