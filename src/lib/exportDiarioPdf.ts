@@ -24,6 +24,7 @@ interface DiarioPdfData {
   criadoEm: string;
   atividades: AtividadeRow[];
   fotoUrls: string[];
+  empregados?: { nome: string; empreiteiro: string; fotoUrl?: string | null }[];
 }
 
 const climaLabels: Record<string, string> = {
@@ -87,6 +88,52 @@ export async function exportDiarioPdf(d: DiarioPdfData) {
   }
 
   y += 5;
+
+  // ── Empregados presentes ──
+  if (d.empregados && d.empregados.length > 0) {
+    const pageH = doc.internal.pageSize.getHeight();
+    if (y > pageH - 30) { doc.addPage(); y = margin; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(`Empregados presentes (${d.empregados.length})`, margin, y);
+    y += 6;
+
+    // agrupa por empreiteiro
+    const grupos = new Map<string, { nome: string; fotoUrl?: string | null }[]>();
+    for (const e of d.empregados) {
+      if (!grupos.has(e.empreiteiro)) grupos.set(e.empreiteiro, []);
+      grupos.get(e.empreiteiro)!.push({ nome: e.nome, fotoUrl: e.fotoUrl });
+    }
+
+    const photo = 11; // mm
+    for (const [empreiteiro, itens] of grupos) {
+      if (y > pageH - 20) { doc.addPage(); y = margin; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text(empreiteiro, margin, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      for (const emp of itens) {
+        if (y + photo > pageH - margin) { doc.addPage(); y = margin; }
+        let drewPhoto = false;
+        if (emp.fotoUrl) {
+          try {
+            const img = await loadImageAsBase64(emp.fotoUrl);
+            doc.addImage(img, 'JPEG', margin, y, photo, photo);
+            drewPhoto = true;
+          } catch (err) {
+            console.warn('[exportDiarioPdf] Falha ao carregar foto do empregado:', err);
+          }
+        }
+        const textX = margin + (drewPhoto ? photo + 3 : 0);
+        doc.text(emp.nome, textX, y + photo / 2 + 1);
+        y += photo + 2;
+      }
+      y += 2;
+    }
+    y += 4;
+  }
 
   // ── Atividades table ──
   if (d.atividades.length > 0) {

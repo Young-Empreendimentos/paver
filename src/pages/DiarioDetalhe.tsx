@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { fetchObras, fetchEapItems, fetchPlantas, fetchDiarioEmpregados, FotoLocalizada, PlantaObra } from '@/services/api';
+import { fetchObras, fetchEapItems, fetchPlantas, fetchDiarioEmpregados, fetchEmpreiteiros, getSignedUrl, EMPREITEIROS_BUCKET, FotoLocalizada, PlantaObra } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
 import { paverDb } from '@/integrations/supabase/paver';
 import { exportDiarioPdf } from '@/lib/exportDiarioPdf';
@@ -100,6 +100,7 @@ export default function DiarioDetalhePage() {
     queryFn: () => fetchDiarioEmpregados(id!),
     enabled: !!id,
   });
+  const { data: empreiteirosList = [] } = useQuery({ queryKey: ['empreiteiros'], queryFn: fetchEmpreiteiros });
 
   // Fetch all avanço sums per eap_item for this obra to compute remaining
   const { data: avancoSums = [] } = useQuery({
@@ -216,6 +217,19 @@ export default function DiarioDetalhePage() {
           onClick={async () => {
             setExporting(true);
             try {
+              const nomeEmprById = new Map(empreiteirosList.map(e => [e.id, e.razao_social]));
+              const empregadosPdf = await Promise.all(diarioEmpregados.map(async de => {
+                const fotoPath = de.paver_empregados?.foto_path || null;
+                let fotoUrl: string | null = null;
+                if (fotoPath) {
+                  try { fotoUrl = await getSignedUrl(EMPREITEIROS_BUCKET, fotoPath, 300); } catch { /* sem foto */ }
+                }
+                return {
+                  nome: de.paver_empregados?.nome_completo || 'Empregado',
+                  empreiteiro: nomeEmprById.get(de.paver_empregados?.empreiteiro_id || '') || 'Sem empreiteiro',
+                  fotoUrl,
+                };
+              }));
               await exportDiarioPdf({
                 data: formatDate(diario.data),
                 obraNome: obraNome,
@@ -244,6 +258,7 @@ export default function DiarioDetalhePage() {
                   };
                 }),
                 fotoUrls: allFotoUrls,
+                empregados: empregadosPdf,
               });
             } finally {
               setExporting(false);
