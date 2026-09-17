@@ -399,6 +399,7 @@ export default function DiarioObraNovoPage() {
   const [climaTarde, setClimaTarde] = useState('ensolarado');
   const [maoDeObra, setMaoDeObra] = useState('');
   const [empregadosSel, setEmpregadosSel] = useState<Set<string>>(new Set());
+  const [semEmpregados, setSemEmpregados] = useState(false);
   const [observacoes, setObservacoes] = useState('');
   const [atividades, setAtividades] = useState<Map<string, AtividadeEntry>>(new Map());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -455,11 +456,17 @@ export default function DiarioObraNovoPage() {
     return n;
   });
 
-  const toggleEmpregado = (id: string) => setEmpregadosSel(prev => {
-    const n = new Set(prev);
-    n.has(id) ? n.delete(id) : n.add(id);
-    return n;
-  });
+  const toggleEmpregado = (id: string) => {
+    setSemEmpregados(false);
+    setEmpregadosSel(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  // Confirmação obrigatória: ou marcou empregados, ou declarou "sem empregados neste dia".
+  const maoDeObraConfirmada = empregadosSel.size > 0 || semEmpregados;
 
   // Só itens com quantidade prevista > 0 podem receber lançamento; itens com
   // quantidade 0 (diâmetro/serviço que não existe naquela rua) não aparecem no diário.
@@ -800,9 +807,30 @@ export default function DiarioObraNovoPage() {
     onError: (err: any) => toast({ title: 'Erro', description: err.message, variant: 'destructive' }),
   });
 
-  const handleNext = () => setStep(2);
+  const handleNext = () => {
+    if (!maoDeObraConfirmada) {
+      toast({
+        title: 'Confirme a mão de obra',
+        description: 'Marque os empregados presentes ou selecione "Sem empregados neste dia".',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setStep(2);
+  };
   const handleBack = () => setStep(1);
-  const handleSubmit = () => saveMutation.mutate();
+  const handleSubmit = () => {
+    if (!maoDeObraConfirmada) {
+      setStep(1);
+      toast({
+        title: 'Confirme a mão de obra',
+        description: 'Marque os empregados presentes ou selecione "Sem empregados neste dia".',
+        variant: 'destructive',
+      });
+      return;
+    }
+    saveMutation.mutate();
+  };
 
   // Get the current planta object for the pin modal
   const currentPlanta = plantas.find(p => p.id === selectedPlantaId);
@@ -973,18 +1001,18 @@ export default function DiarioObraNovoPage() {
             <Textarea value={maoDeObra} onChange={e => setMaoDeObra(e.target.value)} rows={3} placeholder="Ex: 2 pedreiros, 1 encanador, 3 serventes..." className="font-body" />
           </div>
 
-          {/* Empregados presentes (opcional) */}
+          {/* Empregados presentes (obrigatório: marcar presentes OU "sem empregados") */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="font-body">Empregados presentes (opcional)</Label>
+              <Label className="font-body">Empregados presentes *</Label>
               {empregadosSel.size > 0 && <Badge variant="secondary" className="font-body">{empregadosSel.size} selecionado(s)</Badge>}
             </div>
             {totalEmpregadosAtivos === 0 ? (
               <p className="text-xs text-muted-foreground font-body">
-                Nenhum empregado ativo cadastrado — cadastre em <span className="font-medium">Empreiteiros</span>.
+                Nenhum empregado ativo cadastrado — cadastre em <span className="font-medium">Empreiteiros</span>, ou marque "Sem empregados neste dia".
               </p>
             ) : (
-              <div className="rounded-md border border-border divide-y max-h-72 overflow-y-auto">
+              <div className={`rounded-md border border-border divide-y max-h-72 overflow-y-auto ${semEmpregados ? 'opacity-50 pointer-events-none' : ''}`}>
                 {empregadosPorEmpreiteiro.map(g => {
                   const selInGroup = g.itens.filter(e => empregadosSel.has(e.id)).length;
                   const open = expandedEmpr.has(g.id);
@@ -1017,6 +1045,20 @@ export default function DiarioObraNovoPage() {
                   );
                 })}
               </div>
+            )}
+
+            <label className="flex items-center gap-2 cursor-pointer pt-1">
+              <Checkbox
+                checked={semEmpregados}
+                onCheckedChange={(v) => { setSemEmpregados(!!v); if (v) setEmpregadosSel(new Set()); }}
+              />
+              <span className="font-body text-sm">Sem empregados neste dia</span>
+            </label>
+
+            {!maoDeObraConfirmada && (
+              <p className="text-[11px] text-destructive font-body">
+                Confirme: marque os empregados presentes ou "Sem empregados neste dia".
+              </p>
             )}
           </div>
 
