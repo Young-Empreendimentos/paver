@@ -514,7 +514,7 @@ export interface Empreiteiro {
 
 export interface Empregado {
   id: string;
-  empreiteiro_id: string;
+  empreiteiro_id: string | null; // null = diarista (sem empreiteiro/CNPJ)
   nome_completo: string;
   cpf?: string | null;
   rg?: string | null;
@@ -599,7 +599,7 @@ export async function deleteEmpregado(id: string) {
 // Vínculo empregado ↔ diário (Fase 2)
 export interface DiarioEmpregadoLink {
   empregado_id: string;
-  paver_empregados: { nome_completo: string; empreiteiro_id: string; foto_path: string | null } | null;
+  paver_empregados: { nome_completo: string; empreiteiro_id: string | null; foto_path: string | null } | null;
 }
 
 export async function fetchDiarioEmpregados(diarioId: string) {
@@ -617,4 +617,56 @@ export async function insertDiarioEmpregados(diarioId: string, empregadoIds: str
     .from('paver_diario_empregados' as any)
     .insert(empregadoIds.map(id => ({ diario_id: diarioId, empregado_id: id })) as any);
   if (error) throw error;
+}
+
+// Arquivos (vários) por empreiteiro
+export interface EmpreiteiroArquivo {
+  id: string;
+  empreiteiro_id: string;
+  nome: string;
+  path: string;
+  created_by: string;
+  created_at: string;
+}
+
+export async function fetchAllEmpreiteiroArquivos() {
+  const { data, error } = await paverDb
+    .from('paver_empreiteiro_arquivos' as any)
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []) as unknown as EmpreiteiroArquivo[];
+}
+
+export async function addEmpreiteiroArquivo(a: Omit<EmpreiteiroArquivo, 'id' | 'created_at'>) {
+  const { data, error } = await paverDb
+    .from('paver_empreiteiro_arquivos' as any)
+    .insert(a as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as EmpreiteiroArquivo;
+}
+
+export async function deleteEmpreiteiroArquivo(id: string) {
+  const { error } = await paverDb.from('paver_empreiteiro_arquivos' as any).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Em quais obras cada empreiteiro aparece (many-to-many)
+export async function fetchEmpreiteiroObras() {
+  const { data, error } = await paverDb.from('paver_empreiteiro_obras' as any).select('*');
+  if (error) throw error;
+  return (data || []) as unknown as { empreiteiro_id: string; obra_id: string }[];
+}
+
+export async function setEmpreiteiroObras(empreiteiroId: string, obraIds: string[]) {
+  const del = await paverDb.from('paver_empreiteiro_obras' as any).delete().eq('empreiteiro_id', empreiteiroId);
+  if (del.error) throw del.error;
+  if (obraIds.length > 0) {
+    const { error } = await paverDb
+      .from('paver_empreiteiro_obras' as any)
+      .insert(obraIds.map(o => ({ empreiteiro_id: empreiteiroId, obra_id: o })) as any);
+    if (error) throw error;
+  }
 }

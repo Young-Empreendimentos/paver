@@ -226,7 +226,9 @@ export default function DiarioDetalhePage() {
                 }
                 return {
                   nome: de.paver_empregados?.nome_completo || 'Empregado',
-                  empreiteiro: nomeEmprById.get(de.paver_empregados?.empreiteiro_id || '') || 'Sem empreiteiro',
+                  empreiteiro: de.paver_empregados?.empreiteiro_id
+                    ? (nomeEmprById.get(de.paver_empregados.empreiteiro_id) || 'Sem empreiteiro')
+                    : 'Diaristas',
                   fotoUrl,
                 };
               }));

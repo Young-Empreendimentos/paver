@@ -22,7 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, insertDiarioEmpregados } from '@/services/api';
+import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, fetchEmpreiteiroObras, insertDiarioEmpregados } from '@/services/api';
 
 import { paverDb } from '@/integrations/supabase/paver';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
@@ -433,21 +433,32 @@ export default function DiarioObraNovoPage() {
   });
   const { data: empreiteiros = [] } = useQuery({ queryKey: ['empreiteiros'], queryFn: fetchEmpreiteiros });
   const { data: todosEmpregados = [] } = useQuery({ queryKey: ['empregados-all'], queryFn: fetchAllEmpregados });
+  const { data: empreiteiroObras = [] } = useQuery({ queryKey: ['empreiteiro-obras'], queryFn: fetchEmpreiteiroObras });
 
-  // Empregados ativos agrupados por empreiteiro (para o seletor de presentes)
+  // Empregados ativos, filtrados pela obra e agrupados por empreiteiro (+ Diaristas).
+  // Regra: empreiteiro sem nenhum vínculo de obra aparece em todas; com vínculo, só na(s) obra(s) marcada(s).
+  // Diaristas (sem empreiteiro) sempre aparecem.
   const empregadosPorEmpreiteiro = useMemo(() => {
     const nomeById = new Map(empreiteiros.map(e => [e.id, e.razao_social]));
+    const empComVinculo = new Set(empreiteiroObras.map(l => l.empreiteiro_id));
+    const permitido = (empId: string) =>
+      !empComVinculo.has(empId) || empreiteiroObras.some(l => l.empreiteiro_id === empId && l.obra_id === selectedObraId);
+
     const groups = new Map<string, { id: string; nome: string; itens: typeof todosEmpregados }>();
     for (const emp of todosEmpregados.filter(e => e.ativo)) {
-      if (!groups.has(emp.empreiteiro_id)) {
-        groups.set(emp.empreiteiro_id, { id: emp.empreiteiro_id, nome: nomeById.get(emp.empreiteiro_id) || 'Sem empreiteiro', itens: [] });
+      if (emp.empreiteiro_id) {
+        if (!permitido(emp.empreiteiro_id)) continue;
+        const key = emp.empreiteiro_id;
+        if (!groups.has(key)) groups.set(key, { id: key, nome: nomeById.get(key) || 'Sem empreiteiro', itens: [] });
+        groups.get(key)!.itens.push(emp);
+      } else {
+        const key = '__diaristas__';
+        if (!groups.has(key)) groups.set(key, { id: key, nome: 'Diaristas', itens: [] });
+        groups.get(key)!.itens.push(emp);
       }
-      groups.get(emp.empreiteiro_id)!.itens.push(emp);
     }
     return [...groups.values()].sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [empreiteiros, todosEmpregados]);
-
-  const totalEmpregadosAtivos = useMemo(() => todosEmpregados.filter(e => e.ativo).length, [todosEmpregados]);
+  }, [empreiteiros, todosEmpregados, empreiteiroObras, selectedObraId]);
 
   const [expandedEmpr, setExpandedEmpr] = useState<Set<string>>(new Set());
   const toggleEmprGroup = (id: string) => setExpandedEmpr(prev => {
@@ -1007,9 +1018,9 @@ export default function DiarioObraNovoPage() {
               <Label className="font-body">Empregados presentes *</Label>
               {empregadosSel.size > 0 && <Badge variant="secondary" className="font-body">{empregadosSel.size} selecionado(s)</Badge>}
             </div>
-            {totalEmpregadosAtivos === 0 ? (
+            {empregadosPorEmpreiteiro.length === 0 ? (
               <p className="text-xs text-muted-foreground font-body">
-                Nenhum empregado ativo cadastrado — cadastre em <span className="font-medium">Empreiteiros</span>, ou marque "Sem empregados neste dia".
+                Nenhum empregado disponível para esta obra — cadastre/vincule em <span className="font-medium">Empreiteiros</span>, ou marque "Sem empregados neste dia".
               </p>
             ) : (
               <div className={`rounded-md border border-border divide-y max-h-72 overflow-y-auto ${semEmpregados ? 'opacity-50 pointer-events-none' : ''}`}>
