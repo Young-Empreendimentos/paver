@@ -339,7 +339,7 @@ export default function Empreiteiros() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Empreiteiro | null>(null);
   const [form, setForm] = useState<EmpreiteiroForm>(emptyEmpreiteiro);
-  const [contratoFile, setContratoFile] = useState<File | null>(null);
+  const [arquivoFiles, setArquivoFiles] = useState<File[]>([]);
   const [obrasSel, setObrasSel] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [empregadosCtx, setEmpregadosCtx] = useState<{ empreiteiroId: string | null; titulo: string } | null>(null);
@@ -358,20 +358,22 @@ export default function Empreiteiros() {
   const obrasDoEmpreiteiro = (id: string) => empreiteiroObras.filter(l => l.empreiteiro_id === id).map(l => l.obra_id);
   const diaristas = empregados.filter(e => !e.empreiteiro_id);
 
-  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyEmpreiteiro); setContratoFile(null); setObrasSel(new Set()); };
+  const closeDialog = () => { setDialogOpen(false); setEditing(null); setForm(emptyEmpreiteiro); setArquivoFiles([]); setObrasSel(new Set()); };
 
   const toggleObra = (obraId: string) => setObrasSel(prev => { const n = new Set(prev); n.has(obraId) ? n.delete(obraId) : n.add(obraId); return n; });
 
-  const uploadContrato = async (empreiteiroId: string): Promise<Partial<Empreiteiro>> => {
-    if (!contratoFile) return {};
-    const p = `contratos/${empreiteiroId}/${Date.now()}_${slug(contratoFile.name)}`;
-    const path = await uploadPrivateFile(EMPREITEIROS_BUCKET, p, contratoFile);
-    return { contrato_path: path, contrato_nome: contratoFile.name };
+  const uploadArquivos = async (empreiteiroId: string) => {
+    for (const f of arquivoFiles) {
+      const p = `arquivos/${empreiteiroId}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${slug(f.name)}`;
+      const path = await uploadPrivateFile(EMPREITEIROS_BUCKET, p, f);
+      await addEmpreiteiroArquivo({ empreiteiro_id: empreiteiroId, nome: f.name, path, created_by: user!.id });
+    }
   };
 
   const afterSave = () => {
     queryClient.invalidateQueries({ queryKey: ['empreiteiros'] });
     queryClient.invalidateQueries({ queryKey: ['empreiteiro-obras'] });
+    queryClient.invalidateQueries({ queryKey: ['empreiteiro-arquivos'] });
   };
 
   const createMut = useMutation({
@@ -380,8 +382,7 @@ export default function Empreiteiros() {
         razao_social: form.razao_social, cnpj: form.cnpj || null, ativo: form.ativo,
         contrato_path: null, contrato_nome: null, created_by: user!.id,
       });
-      const updates = await uploadContrato(emp.id);
-      if (Object.keys(updates).length) await updateEmpreiteiro(emp.id, updates);
+      await uploadArquivos(emp.id);
       await setEmpreiteiroObras(emp.id, [...obrasSel]);
     },
     onSuccess: () => { afterSave(); toast({ title: 'Empreiteiro cadastrado!' }); closeDialog(); },
@@ -391,8 +392,7 @@ export default function Empreiteiros() {
   const updateMut = useMutation({
     mutationFn: async (id: string) => {
       await updateEmpreiteiro(id, { razao_social: form.razao_social, cnpj: form.cnpj || null, ativo: form.ativo });
-      const updates = await uploadContrato(id);
-      if (Object.keys(updates).length) await updateEmpreiteiro(id, updates);
+      await uploadArquivos(id);
       await setEmpreiteiroObras(id, [...obrasSel]);
     },
     onSuccess: () => { afterSave(); toast({ title: 'Empreiteiro atualizado!' }); closeDialog(); },
@@ -410,15 +410,10 @@ export default function Empreiteiros() {
     onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
-  const openContrato = async (path: string) => {
-    try { window.open(await getSignedUrl(EMPREITEIROS_BUCKET, path, 300), '_blank', 'noopener'); }
-    catch (e: any) { toast({ title: 'Erro ao abrir contrato', description: e.message, variant: 'destructive' }); }
-  };
-
   const openEdit = (e: Empreiteiro) => {
     setEditing(e);
     setForm({ razao_social: e.razao_social, cnpj: e.cnpj || '', ativo: e.ativo });
-    setContratoFile(null);
+    setArquivoFiles([]);
     setObrasSel(new Set(obrasDoEmpreiteiro(e.id)));
     setDialogOpen(true);
   };
@@ -442,7 +437,7 @@ export default function Empreiteiros() {
           <h1 className="text-2xl font-heading font-bold text-foreground">Empreiteiros</h1>
           <p className="text-muted-foreground font-body">Cadastro de empreiteiros, diaristas e seus empregados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else { setForm(emptyEmpreiteiro); setEditing(null); setContratoFile(null); setObrasSel(new Set()); setDialogOpen(true); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else { setForm(emptyEmpreiteiro); setEditing(null); setArquivoFiles([]); setObrasSel(new Set()); setDialogOpen(true); } }}>
           <DialogTrigger asChild>
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-body"><Plus className="h-4 w-4 mr-2" /> Novo Empreiteiro</Button>
           </DialogTrigger>
@@ -452,9 +447,11 @@ export default function Empreiteiros() {
               <div className="space-y-2"><Label className="font-body">Razão social *</Label><Input value={form.razao_social} onChange={e => setForm({ ...form, razao_social: e.target.value })} required className="font-body" /></div>
               <div className="space-y-2"><Label className="font-body">CNPJ</Label><Input value={form.cnpj} onChange={e => setForm({ ...form, cnpj: e.target.value })} className="font-body" placeholder="00.000.000/0000-00" /></div>
               <div className="space-y-2">
-                <Label className="font-body">Contrato (PDF)</Label>
-                <Input type="file" accept="application/pdf" onChange={e => setContratoFile(e.target.files?.[0] ?? null)} className="font-body" />
-                {editing?.contrato_path && !contratoFile && <p className="text-[10px] text-muted-foreground font-body">Já tem contrato ({editing.contrato_nome}) — envie outro para trocar.</p>}
+                <Label className="font-body">Arquivos (contrato, documentos…)</Label>
+                <Input type="file" multiple onChange={e => setArquivoFiles(Array.from(e.target.files ?? []))} className="font-body" />
+                {arquivoFiles.length > 0
+                  ? <p className="text-[10px] text-muted-foreground font-body">{arquivoFiles.length} arquivo(s) selecionado(s) para enviar.</p>
+                  : <p className="text-[10px] text-muted-foreground font-body">Pode selecionar vários de uma vez.{editing ? ' Ver/gerenciar os já enviados no botão "Arquivos" do card.' : ''}</p>}
               </div>
               <div className="space-y-2">
                 <Label className="font-body">Aparece nas obras</Label>
@@ -491,7 +488,7 @@ export default function Empreiteiros() {
             <UserPlus className="h-5 w-5 text-accent" />
             <div>
               <p className="font-heading font-semibold text-sm">Diaristas (sem CNPJ)</p>
-              <p className="text-xs text-muted-foreground font-body">{diaristas.length} cadastrado(s) — aparecem em todas as obras no diário</p>
+              <p className="text-xs text-muted-foreground font-body">{diaristas.length} cadastrado(s) — ficam disponíveis para marcar no diário; só entram quando você marca</p>
             </div>
           </div>
           <Button size="sm" variant="outline" className="font-body" onClick={() => setDiaristasOpen(true)}>
@@ -536,11 +533,6 @@ export default function Empreiteiros() {
                     ))}
                   </div>
                   <div className="flex flex-wrap gap-2 items-center pt-1">
-                    {emp.contrato_path && (
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-body" onClick={() => openContrato(emp.contrato_path!)}>
-                        <FileText className="h-3 w-3 mr-1" /> Contrato <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
                     <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-body" onClick={() => setArquivosDe(emp)}>
                       <Paperclip className="h-3 w-3 mr-1" /> Arquivos{nArq > 0 ? ` (${nArq})` : ''}
                     </Button>
