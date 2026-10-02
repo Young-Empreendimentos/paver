@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authorized = roles.length > 0 && ativo;
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     resetAccess();
   };
 
