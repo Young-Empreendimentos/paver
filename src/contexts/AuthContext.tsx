@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { paverDb } from '@/integrations/supabase/paver';
@@ -30,11 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
   const [ativo, setAtivo] = useState(true);
+  // Último usuário cujo acesso já foi carregado. Evita recarregar (e desmontar a
+  // tela) quando o Supabase re-emite SIGNED_IN/TOKEN_REFRESHED ao voltar o foco.
+  const loadedUserIdRef = useRef<string | null>(null);
 
   // Busca perfil + roles do Paver. Determina se o usuário pode acessar o app.
   // Executado fora do callback do onAuthStateChange (setTimeout) para evitar
   // o deadlock conhecido do supabase-js ao chamar a API dentro do listener.
   const loadAccess = async (userId: string) => {
+    loadedUserIdRef.current = userId;
     setAccessLoading(true);
     const [rolesRes, profileRes] = await Promise.all([
       paverDb.from('paver_user_roles').select('role').eq('user_id', userId),
@@ -57,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetAccess = () => {
+    loadedUserIdRef.current = null;
     setRoles([]);
     setUserName(null);
     setAtivo(true);
@@ -66,17 +71,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-
-        if (session?.user) {
-          setAccessLoading(true);
-          setTimeout(() => loadAccess(session.user.id), 0);
-        } else {
-          resetAccess();
-        }
         setLoading(false);
+
+        // Token apenas renovou (acontece ao voltar o foco pra aba): NÃO recarrega o
+        // acesso nem mostra "Carregando" — senão a tela desmonta e perde o que
+        // estava sendo preenchido.
+        if (event === 'TOKEN_REFRESHED') return;
+
+        const uid = session?.user?.id ?? null;
+        if (!uid) { resetAccess(); return; }
+
+        // Mesmo usuário que já foi carregado (ex.: SIGNED_IN re-emitido ao focar a
+        // aba): nada a fazer — mantém a tela e os dados como estão.
+        if (uid === loadedUserIdRef.current) return;
+
+        // Usuário novo / primeiro login: aí sim carrega o acesso.
+        setAccessLoading(true);
+        setTimeout(() => loadAccess(uid), 0);
       }
     );
 
@@ -85,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadAccess(session.user.id);
+        if (loadedUserIdRef.current !== session.user.id) loadAccess(session.user.id);
       } else {
         resetAccess();
       }
