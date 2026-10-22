@@ -1,6 +1,29 @@
 import { supabase } from '@/integrations/supabase/client';
 import { paverDb } from '@/integrations/supabase/paver';
 
+/**
+ * Busca TODAS as linhas de uma tabela paginando de 1000 em 1000.
+ * ⚠️ O PostgREST/Supabase corta em 1000 linhas por consulta por padrão. Sem paginar,
+ * ao passar de 1000 os registros mais novos somem SILENCIOSAMENTE (quebrou a produção
+ * do diário em set/out quando paver_diario_atividades passou de 1000). Use SEMPRE que
+ * precisar de "todos" de uma tabela que pode crescer.
+ */
+async function fetchAllPaged<T = any>(table: string, refine?: (q: any) => any): Promise<T[]> {
+  const PAGE = 1000;
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let q: any = paverDb.from(table as any).select('*');
+    if (refine) q = refine(q);
+    q = q.order('id', { ascending: true }).range(from, from + PAGE - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    const batch = (data || []) as T[];
+    all.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return all;
+}
+
 export interface Obra {
   id: string;
   nome: string;
@@ -144,11 +167,8 @@ export async function fetchEapItems(obraId: string) {
 }
 
 export async function fetchAllEapItems() {
-  const { data, error } = await paverDb
-    .from('paver_eap_items')
-    .select('*')
-    .eq('tipo', 'item');
-  if (error) throw error;
+  // Pagina (983 itens hoje, perto do corte de 1000) — ver fetchAllPaged.
+  const data = await fetchAllPaged<EapItem>('paver_eap_items', (q) => q.eq('tipo', 'item'));
   return enrichWithComputedAvanco(data as EapItem[]);
 }
 

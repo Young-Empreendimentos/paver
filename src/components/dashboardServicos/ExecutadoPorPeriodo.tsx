@@ -37,31 +37,43 @@ interface DiarioRow {
   } | null;
 }
 
-async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
-  const [atvRes, diariosRes, itemsRes] = await Promise.all([
-    paverDb.from('paver_diario_atividades').select('quantidade_dia, diario_id, eap_item_id'),
-    paverDb.from('paver_diarios').select('id, data'),
-    paverDb.from('paver_eap_items').select('id, obra_id, tag_id').not('tag_id', 'is', null),
-  ]);
-  if (atvRes.error) throw atvRes.error;
-  if (diariosRes.error) throw diariosRes.error;
-  if (itemsRes.error) throw itemsRes.error;
+// Puxa TODAS as linhas de uma tabela, paginando de 1000 em 1000.
+// O PostgREST corta em 1000 por consulta; sem paginar, os lançamentos mais
+// novos somem (foi o que zerou set/out quando a tabela passou de 1000 linhas).
+async function fetchAllPaged(table: string, columns: string, refine?: (q: any) => any): Promise<any[]> {
+  const PAGE = 1000;
+  const all: any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let q: any = paverDb.from(table as any).select(columns);
+    if (refine) q = refine(q);
+    q = q.order('id', { ascending: true }).range(from, from + PAGE - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    const batch = data || [];
+    all.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return all;
+}
 
-  const diarioById = new Map((diariosRes.data || []).map((d: any) => [d.id, d.data as string]));
+async function fetchDiarioHistorico(): Promise<DiarioRow[]> {
+  const [atv, diarios, items] = await Promise.all([
+    fetchAllPaged('paver_diario_atividades', 'quantidade_dia, diario_id, eap_item_id'),
+    fetchAllPaged('paver_diarios', 'id, data'),
+    fetchAllPaged('paver_eap_items', 'id, obra_id, tag_id', (q) => q.not('tag_id', 'is', null)),
+  ]);
+
+  const diarioById = new Map(diarios.map((d: any) => [d.id, d.data as string]));
   const itemById = new Map(
-    (itemsRes.data || []).map((i: any) => [i.id, { obra_id: i.obra_id as string, tag_id: i.tag_id as string | null }]),
+    items.map((i: any) => [i.id, { obra_id: i.obra_id as string, tag_id: i.tag_id as string | null }]),
   );
 
   const rows: DiarioRow[] = [];
-  for (const a of (atvRes.data || []) as any[]) {
+  for (const a of atv as any[]) {
     const item = itemById.get(a.eap_item_id);
     const data = diarioById.get(a.diario_id);
     if (!item || !data) continue;
-    rows.push({
-      quantidade_dia: Number(a.quantidade_dia) || 0,
-      data,
-      eap_item: item,
-    });
+    rows.push({ quantidade_dia: Number(a.quantidade_dia) || 0, data, eap_item: item });
   }
   return rows;
 }
