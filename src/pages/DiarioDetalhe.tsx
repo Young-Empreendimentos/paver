@@ -102,6 +102,24 @@ export default function DiarioDetalhePage() {
   });
   const { data: empreiteirosList = [] } = useQuery({ queryKey: ['empreiteiros'], queryFn: fetchEmpreiteiros });
 
+  // Presentes agrupados por equipe (empreiteiro); sem empreiteiro = Diaristas (sempre por último)
+  const empregadosPorEquipe = useMemo(() => {
+    const nomeEmprById = new Map(empreiteirosList.map(e => [e.id, e.razao_social]));
+    const groups = new Map<string, { id: string; nome: string; itens: typeof diarioEmpregados }>();
+    for (const de of diarioEmpregados) {
+      const emprId = de.paver_empregados?.empreiteiro_id || null;
+      const key = emprId || '__diaristas__';
+      const nome = emprId ? (nomeEmprById.get(emprId) || 'Sem empreiteiro') : 'Diaristas';
+      if (!groups.has(key)) groups.set(key, { id: key, nome, itens: [] });
+      groups.get(key)!.itens.push(de);
+    }
+    return [...groups.values()].sort((a, b) => {
+      if (a.id === '__diaristas__') return 1;
+      if (b.id === '__diaristas__') return -1;
+      return a.nome.localeCompare(b.nome);
+    });
+  }, [diarioEmpregados, empreiteirosList]);
+
   // Fetch all avanço sums per eap_item for this obra to compute remaining
   const { data: avancoSums = [] } = useQuery({
     queryKey: ['eap-avanco-sums', diario?.obra_id],
@@ -305,12 +323,21 @@ export default function DiarioDetalhePage() {
           {diarioEmpregados.length > 0 && (
             <div className="pt-2 border-t border-border/50">
               <span className="text-xs font-body text-muted-foreground">Empregados presentes ({diarioEmpregados.length})</span>
-              <div className="flex flex-wrap gap-2 mt-1.5">
-                {diarioEmpregados.map(de => (
-                  <span key={de.empregado_id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 py-0.5 pl-0.5 pr-2.5">
-                    <EmpregadoAvatar path={de.paver_empregados?.foto_path} size={24} />
-                    <span className="font-body text-xs">{de.paver_empregados?.nome_completo || 'Empregado'}</span>
-                  </span>
+              <div className="mt-1.5 space-y-2.5">
+                {empregadosPorEquipe.map(grupo => (
+                  <div key={grupo.id}>
+                    <div className="mb-1 font-body text-xs font-semibold text-foreground">
+                      {grupo.nome} ({grupo.itens.length})
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {grupo.itens.map(de => (
+                        <span key={de.empregado_id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 py-0.5 pl-0.5 pr-2.5">
+                          <EmpregadoAvatar path={de.paver_empregados?.foto_path} size={24} />
+                          <span className="font-body text-xs">{de.paver_empregados?.nome_completo || 'Empregado'}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
