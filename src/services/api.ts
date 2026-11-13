@@ -542,6 +542,7 @@ export interface Empregado {
   foto_path?: string | null;
   documento_path?: string | null;
   ativo: boolean;
+  is_mei?: boolean; // funcionário MEI (ajusta os documentos SST exigidos)
   created_by: string;
   created_at: string;
 }
@@ -689,4 +690,162 @@ export async function setEmpreiteiroObras(empreiteiroId: string, obraIds: string
       .insert(obraIds.map(o => ({ empreiteiro_id: empreiteiroId, obra_id: o })) as any);
     if (error) throw error;
   }
+}
+
+// =====================================================================
+// SST — controle de documentos de empreiteiros
+// =====================================================================
+export type SstEscopo = 'empresa' | 'pessoa';
+export type SstFrequencia = 'fixo' | 'toda_medicao' | 'medicao_dia_1' | 'medicao_dia_16';
+export type SstStatusValor = 'pendente' | 'aprovado' | 'nao_se_aplica';
+
+export interface SstDocumento {
+  id: string;
+  nome: string;
+  escopo: SstEscopo;
+  frequencia: SstFrequencia;
+  obrigatorio: boolean;
+  dispensa_mei: boolean;
+  exclusivo_mei: boolean;
+  ordem: number;
+  ativo: boolean;
+  created_by?: string | null;
+  created_at: string;
+}
+
+export interface SstStatus {
+  id: string;
+  documento_id: string;
+  empreiteiro_id: string | null;
+  empregado_id: string | null;
+  medicao: string | null; // 'YYYY-MM-DD' (dia 1 ou 16) — null em doc fixo
+  status: SstStatusValor;
+  arquivo_path: string | null;
+  arquivo_nome: string | null;
+  observacao: string | null;
+  updated_by?: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+// ---------- Catálogo (tela SST → Configurações) ----------
+export async function fetchSstDocumentos(incluirInativos = false) {
+  let q: any = paverDb
+    .from('paver_sst_documentos' as any)
+    .select('*')
+    .order('escopo', { ascending: true })
+    .order('frequencia', { ascending: true })
+    .order('ordem', { ascending: true });
+  if (!incluirInativos) q = q.eq('ativo', true);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []) as unknown as SstDocumento[];
+}
+
+export async function createSstDocumento(d: Omit<SstDocumento, 'id' | 'created_at'>) {
+  const { data, error } = await paverDb
+    .from('paver_sst_documentos' as any)
+    .insert(d as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as SstDocumento;
+}
+
+export async function updateSstDocumento(id: string, updates: Partial<SstDocumento>) {
+  const { data, error } = await paverDb
+    .from('paver_sst_documentos' as any)
+    .update(updates as any)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as SstDocumento;
+}
+
+export async function deleteSstDocumento(id: string) {
+  const { error } = await paverDb.from('paver_sst_documentos' as any).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---------- Status / entregas ----------
+/** Status de uma empresa (docs de empresa + docs de pessoa dos seus funcionários, que gravam o empreiteiro_id). */
+export async function fetchSstStatusDaEmpresa(empreiteiroId: string) {
+  return fetchAllPaged<SstStatus>('paver_sst_status', (q) => q.eq('empreiteiro_id', empreiteiroId));
+}
+
+/** Status de várias empresas de uma vez (painel por obra). */
+export async function fetchSstStatusDeEmpresas(empreiteiroIds: string[]) {
+  if (empreiteiroIds.length === 0) return [];
+  return fetchAllPaged<SstStatus>('paver_sst_status', (q) => q.in('empreiteiro_id', empreiteiroIds));
+}
+
+export interface SstStatusKey {
+  documento_id: string;
+  empreiteiro_id?: string | null;
+  empregado_id?: string | null;
+  medicao?: string | null;
+}
+export interface SstStatusChange {
+  status?: SstStatusValor;
+  arquivo_path?: string | null;
+  arquivo_nome?: string | null;
+  observacao?: string | null;
+}
+
+/**
+ * Cria ou atualiza a linha de status de um documento para uma entidade/medição.
+ * Faz find-or-create (o índice único usa coalesce → não dá p/ usar upsert do PostgREST).
+ */
+export async function setSstStatus(key: SstStatusKey, changes: SstStatusChange, userId: string) {
+  const empreiteiro_id = key.empreiteiro_id ?? null;
+  const empregado_id = key.empregado_id ?? null;
+  const medicao = key.medicao ?? null;
+
+  let sel: any = paverDb.from('paver_sst_status' as any).select('id').eq('documento_id', key.documento_id);
+  sel = empreiteiro_id ? sel.eq('empreiteiro_id', empreiteiro_id) : sel.is('empreiteiro_id', null);
+  sel = empregado_id ? sel.eq('empregado_id', empregado_id) : sel.is('empregado_id', null);
+  sel = medicao ? sel.eq('medicao', medicao) : sel.is('medicao', null);
+  const { data: existing, error: selErr } = await sel.maybeSingle();
+  if (selErr) throw selErr;
+
+  if (existing) {
+    const { data, error } = await paverDb
+      .from('paver_sst_status' as any)
+      .update({ ...changes, updated_by: userId, updated_at: new Date().toISOString() } as any)
+      .eq('id', (existing as any).id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as unknown as SstStatus;
+  }
+
+  const { data, error } = await paverDb
+    .from('paver_sst_status' as any)
+    .insert({
+      documento_id: key.documento_id,
+      empreiteiro_id,
+      empregado_id,
+      medicao,
+      status: changes.status ?? 'pendente',
+      arquivo_path: changes.arquivo_path ?? null,
+      arquivo_nome: changes.arquivo_nome ?? null,
+      observacao: changes.observacao ?? null,
+      updated_by: userId,
+    } as any)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as unknown as SstStatus;
+}
+
+/** IDs dos funcionários que apareceram em diários da obra a partir de `desdeISO` (YYYY-MM-DD). */
+export async function fetchEmpregadosQueTrabalharam(obraId: string, desdeISO: string): Promise<Set<string>> {
+  const diarios = await fetchAllPaged<{ id: string }>('paver_diarios', (q) =>
+    q.eq('obra_id', obraId).gte('data', desdeISO));
+  const ids = diarios.map((d) => d.id);
+  if (ids.length === 0) return new Set();
+  const links = await fetchAllPaged<{ empregado_id: string }>('paver_diario_empregados', (q) =>
+    q.in('diario_id', ids));
+  return new Set(links.map((l) => l.empregado_id));
 }

@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileBarChart, Users, LogOut, Camera, BarChart3, GitBranch, ClipboardList, FolderTree, Building2, Calendar, Activity, HardHat } from "lucide-react";
+import { LayoutDashboard, FileBarChart, Users, LogOut, Camera, BarChart3, GitBranch, ClipboardList, FolderTree, Building2, Calendar, Activity, HardHat, ShieldCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -22,6 +22,7 @@ const mainItems = [
   { title: "EAP", url: "/eap", icon: FolderTree },
   { title: "Diário de Obra", url: "/diario-obra", icon: ClipboardList },
   { title: "Empreiteiros", url: "/empreiteiros", icon: HardHat },
+  { title: "Controle de SST", url: "/sst", icon: ShieldCheck },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
   { title: "Rel. Fotográfico", url: "/relatorio-fotografico", icon: Camera },
   { title: "Linha de Balanço", url: "/linha-balanco", icon: BarChart3 },

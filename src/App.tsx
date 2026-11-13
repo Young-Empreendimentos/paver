@@ -23,6 +23,8 @@ const DiarioDetalhe = lazy(() => import('./pages/DiarioDetalhe'));
 const DiarioObraNovo = lazy(() => import('./pages/DiarioObraNovo'));
 const AdminObras = lazy(() => import('./pages/AdminObras'));
 const Empreiteiros = lazy(() => import('./pages/Empreiteiros'));
+const Sst = lazy(() => import('./pages/Sst'));
+const SstConfig = lazy(() => import('./pages/SstConfig'));
 const Usuarios = lazy(() => import('./pages/Usuarios'));
 const Login = lazy(() => import('./pages/Login'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -72,6 +74,8 @@ const App = () => (
                 <Route path="/linha-balanco" element={<LinhaBalancoPage />} />
                 <Route path="/datas-eap" element={<DatasEap />} />
                 <Route path="/empreiteiros" element={<Empreiteiros />} />
+                <Route path="/sst" element={<Sst />} />
+                <Route path="/sst/config" element={<SstConfig />} />
                 <Route
                   path="/admin/obras"
                   element={(
