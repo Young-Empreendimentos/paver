@@ -22,7 +22,7 @@ import { EmpregadoAvatar } from '@/components/EmpregadoAvatar';
 import { SstDocRow } from '@/components/SstDocRow';
 import {
   fetchSstDocumentos, fetchEmpreiteiros, fetchAllEmpregados, fetchObras, fetchEmpreiteiroObras,
-  fetchSstStatusDaEmpresa, fetchSstStatusDeEmpresas, fetchEmpregadosQueTrabalharam,
+  fetchSstStatusDaEmpresa, fetchSstStatusDeEmpresas, fetchEmpregadosQueTrabalharam, fetchEmpregadosQueTrabalharamGeral,
   setSstStatus, uploadPrivateFile, getSignedUrl, EMPREITEIROS_BUCKET,
   type SstDocumento, type SstStatus, type SstStatusValor, type SstStatusKey,
   type Empreiteiro, type Empregado,
@@ -189,6 +189,11 @@ function FuncionarioItem({
   open: boolean;
   onToggle: (open: boolean) => void;
 }) {
+  const [fixosOpen, setFixosOpen] = useState(false);
+  const fixoDocs = pdocs.filter((d) => d.frequencia === 'fixo');
+  const medicaoDocs = pdocs.filter((d) => d.frequencia !== 'fixo');
+  const mostrarFixos = fixosOpen || soPendencias;
+
   return (
     <Collapsible open={open} onOpenChange={onToggle}>
       <div className="rounded-md border border-border">
@@ -204,7 +209,25 @@ function FuncionarioItem({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="px-3 pb-2 border-t border-border">
-            <DocList docs={pdocs} keyOf={keyOf} statusMap={statusMap} actions={actions} soPendencias={soPendencias} />
+            {medicaoDocs.length > 0 && (
+              <DocList docs={medicaoDocs} keyOf={keyOf} statusMap={statusMap} actions={actions} soPendencias={soPendencias} />
+            )}
+            {fixoDocs.length > 0 && (
+              <Collapsible open={mostrarFixos} onOpenChange={setFixosOpen} className="mt-1">
+                <CollapsibleTrigger asChild>
+                  <button type="button" className="flex items-center gap-1 py-1.5 text-xs font-body text-muted-foreground hover:text-foreground">
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${mostrarFixos ? '' : '-rotate-90'}`} />
+                    Documentos de cadastro ({fixoDocs.length})
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <DocList docs={fixoDocs} keyOf={keyOf} statusMap={statusMap} actions={actions} soPendencias={soPendencias} />
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+            {medicaoDocs.length === 0 && fixoDocs.length === 0 && (
+              <p className="text-xs text-muted-foreground font-body py-1">Nenhum documento para este funcionário.</p>
+            )}
           </div>
         </CollapsibleContent>
       </div>
@@ -240,13 +263,22 @@ function EmpresaPanel({
     documento_id: d.id, empreiteiro_id: empreiteiro.id, empregado_id: emp.id, medicao: isDocMedicao(d) ? medicao.data : null,
   });
 
-  // Filtro de funcionários: busca por nome + incluir inativos (+ o global "só pendências")
+  // Filtro de funcionários: busca por nome + (ativos / todos / trabalharam recentemente) + "só pendências"
   const [busca, setBusca] = useState('');
-  const [mostrarInativos, setMostrarInativos] = useState(false);
+  const [filtroFunc, setFiltroFunc] = useState<'ativos' | 'todos' | 'recentes'>('ativos');
+  const [periodoDias, setPeriodoDias] = useState(15);
   const empregadosAtivos = useMemo(() => empregados.filter((e) => e.ativo), [empregados]);
 
+  const desdeISO = useMemo(() => { const d = new Date(); d.setDate(d.getDate() - periodoDias); return d.toISOString().slice(0, 10); }, [periodoDias]);
+  const { data: trabSet } = useQuery({
+    queryKey: ['sst-trab-geral', desdeISO],
+    queryFn: () => fetchEmpregadosQueTrabalharamGeral(desdeISO),
+    enabled: filtroFunc === 'recentes',
+  });
+
   const funcView = useMemo(() => {
-    const base = mostrarInativos ? empregados : empregadosAtivos;
+    let base = filtroFunc === 'todos' ? empregados : empregadosAtivos;
+    if (filtroFunc === 'recentes' && trabSet) base = base.filter((e) => trabSet.has(e.id));
     const termo = busca.trim().toLowerCase();
     return base.map((emp) => {
       const pdocs = pessoaDocsAplicaveis(docs, emp, medicao);
@@ -259,7 +291,7 @@ function EmpresaPanel({
     })
       .filter((x) => !termo || x.emp.nome_completo.toLowerCase().includes(termo))
       .filter((x) => !soPendencias || x.r.pendente > 0);
-  }, [empregados, empregadosAtivos, mostrarInativos, busca, docs, medicao, statusMap, empreiteiro.id, soPendencias]);
+  }, [empregados, empregadosAtivos, filtroFunc, trabSet, busca, docs, medicao, statusMap, empreiteiro.id, soPendencias]);
 
   const rFixos = useMemo(() => {
     const r = resumoVazio();
@@ -285,6 +317,9 @@ function EmpresaPanel({
   const expandirTodos = () => setAbertos(new Set(funcView.map((x) => x.emp.id)));
   const recolherTodos = () => setAbertos(new Set());
 
+  const [fixosEmpresaOpen, setFixosEmpresaOpen] = useState(false);
+  const mostrarFixosEmpresa = fixosEmpresaOpen || soPendencias;
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>;
 
   return (
@@ -296,8 +331,19 @@ function EmpresaPanel({
       </div>
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-heading flex items-center gap-2"><Building2 className="h-4 w-4 text-accent" /> Documentos da empresa (fixos)</CardTitle></CardHeader>
-        <CardContent><DocList docs={empresaFixos} keyOf={empMed} statusMap={statusMap} actions={actions} soPendencias={soPendencias} /></CardContent>
+        <Collapsible open={mostrarFixosEmpresa} onOpenChange={setFixosEmpresaOpen}>
+          <CollapsibleTrigger asChild>
+            <button type="button" className="w-full flex items-center gap-2 p-4 text-left hover:bg-muted/50 rounded-md">
+              <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${mostrarFixosEmpresa ? '' : '-rotate-90'}`} />
+              <Building2 className="h-4 w-4 text-accent shrink-0" />
+              <span className="text-sm font-heading">Documentos da empresa (fixos)</span>
+              <div className="ml-auto"><ResumoChip r={rFixos} /></div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-3"><DocList docs={empresaFixos} keyOf={empMed} statusMap={statusMap} actions={actions} soPendencias={soPendencias} /></div>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
       <Card>
@@ -323,22 +369,36 @@ function EmpresaPanel({
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-2 pb-1">
-                <div className="relative flex-1 min-w-[180px]">
+                <div className="relative flex-1 min-w-[160px]">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar funcionário pelo nome..." className="pl-8 h-8 text-xs font-body" />
+                  <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar funcionário..." className="pl-8 h-8 text-xs font-body" />
                 </div>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <Switch checked={mostrarInativos} onCheckedChange={setMostrarInativos} />
-                  <span className="text-xs font-body text-muted-foreground">Incluir inativos</span>
-                </label>
+                <Select value={filtroFunc} onValueChange={(v) => setFiltroFunc(v as 'ativos' | 'todos' | 'recentes')}>
+                  <SelectTrigger className="h-8 w-[190px] text-xs font-body"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativos" className="text-xs font-body">Só ativos</SelectItem>
+                    <SelectItem value="todos" className="text-xs font-body">Todos (com inativos)</SelectItem>
+                    <SelectItem value="recentes" className="text-xs font-body">Trabalharam recentemente</SelectItem>
+                  </SelectContent>
+                </Select>
+                {filtroFunc === 'recentes' && (
+                  <Select value={String(periodoDias)} onValueChange={(v) => setPeriodoDias(Number(v))}>
+                    <SelectTrigger className="h-8 w-[120px] text-xs font-body"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[7, 15, 30, 60].map((n) => <SelectItem key={n} value={String(n)} className="text-xs font-body">últimos {n} dias</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               {funcView.length === 0 ? (
                 <p className="text-sm font-body py-2 text-muted-foreground">
                   {busca.trim()
                     ? 'Nenhum funcionário com esse nome.'
-                    : soPendencias
-                      ? 'Nenhuma pendência nos funcionários ✓'
-                      : 'Nenhum funcionário no filtro.'}
+                    : filtroFunc === 'recentes'
+                      ? 'Ninguém trabalhou nesse período.'
+                      : soPendencias
+                        ? 'Nenhuma pendência nos funcionários ✓'
+                        : 'Nenhum funcionário no filtro.'}
                 </p>
               ) : funcView.map(({ emp, pdocs, r }) => (
                 <FuncionarioItem
