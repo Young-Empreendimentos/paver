@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldCheck, Settings2, Building2, Users, Loader2, ArrowRight, HardHat, ChevronDown,
-  ChevronsDownUp, ChevronsUpDown,
+  ChevronsDownUp, ChevronsUpDown, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -240,9 +240,15 @@ function EmpresaPanel({
     documento_id: d.id, empreiteiro_id: empreiteiro.id, empregado_id: emp.id, medicao: isDocMedicao(d) ? medicao.data : null,
   });
 
-  // Funcionários + resumo de cada; filtra por "só pendências"
+  // Filtro de funcionários: busca por nome + incluir inativos (+ o global "só pendências")
+  const [busca, setBusca] = useState('');
+  const [mostrarInativos, setMostrarInativos] = useState(false);
+  const empregadosAtivos = useMemo(() => empregados.filter((e) => e.ativo), [empregados]);
+
   const funcView = useMemo(() => {
-    return empregados.map((emp) => {
+    const base = mostrarInativos ? empregados : empregadosAtivos;
+    const termo = busca.trim().toLowerCase();
+    return base.map((emp) => {
       const pdocs = pessoaDocsAplicaveis(docs, emp, medicao);
       const r = resumoVazio();
       for (const d of pdocs) {
@@ -250,8 +256,10 @@ function EmpresaPanel({
         contaItem(r, d, statusValor(statusMap, d.id, empreiteiro.id, emp.id, med));
       }
       return { emp, pdocs, r };
-    }).filter((x) => !soPendencias || x.r.pendente > 0);
-  }, [empregados, docs, medicao, statusMap, empreiteiro.id, soPendencias]);
+    })
+      .filter((x) => !termo || x.emp.nome_completo.toLowerCase().includes(termo))
+      .filter((x) => !soPendencias || x.r.pendente > 0);
+  }, [empregados, empregadosAtivos, mostrarInativos, busca, docs, medicao, statusMap, empreiteiro.id, soPendencias]);
 
   const rFixos = useMemo(() => {
     const r = resumoVazio();
@@ -265,12 +273,12 @@ function EmpresaPanel({
   }, [empresaMensais, statusMap, empreiteiro.id, medicao.data]);
   const rFunc = useMemo(() => {
     const r = resumoVazio();
-    for (const emp of empregados) for (const d of pessoaDocsAplicaveis(docs, emp, medicao)) {
+    for (const emp of empregadosAtivos) for (const d of pessoaDocsAplicaveis(docs, emp, medicao)) {
       const med = isDocMedicao(d) ? medicao.data : null;
       contaItem(r, d, statusValor(statusMap, d.id, empreiteiro.id, emp.id, med));
     }
     return r;
-  }, [empregados, docs, statusMap, empreiteiro.id, medicao]);
+  }, [empregadosAtivos, docs, statusMap, empreiteiro.id, medicao]);
 
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const toggleFunc = (id: string) => setAbertos((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -284,7 +292,7 @@ function EmpresaPanel({
       <div className="grid gap-3 sm:grid-cols-3">
         <ResumoCard titulo="Documentos da empresa" icon={<Building2 className="h-4 w-4" />} r={rFixos} />
         <ResumoCard titulo={`Mensais · ${medicao.label}`} icon={<ShieldCheck className="h-4 w-4" />} r={rMensais} />
-        <ResumoCard titulo={`Funcionários (${empregados.length})`} icon={<Users className="h-4 w-4" />} r={rFunc} />
+        <ResumoCard titulo={`Funcionários (${empregadosAtivos.length})`} icon={<Users className="h-4 w-4" />} r={rFunc} />
       </div>
 
       <Card>
@@ -312,15 +320,35 @@ function EmpresaPanel({
         <CardContent className="space-y-2">
           {empregados.length === 0 ? (
             <p className="text-sm text-muted-foreground font-body py-2">Nenhum funcionário cadastrado para este empreiteiro. Cadastre em <Link to="/empreiteiros" className="underline">Empreiteiros</Link>.</p>
-          ) : funcView.length === 0 ? (
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-body py-2">Nenhuma pendência nos funcionários ✓</p>
-          ) : funcView.map(({ emp, pdocs, r }) => (
-            <FuncionarioItem
-              key={emp.id} emp={emp} pdocs={pdocs} resumo={r} keyOf={pessoaKey(emp)}
-              statusMap={statusMap} actions={actions} soPendencias={soPendencias}
-              open={abertos.has(emp.id)} onToggle={() => toggleFunc(emp.id)}
-            />
-          ))}
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2 pb-1">
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar funcionário pelo nome..." className="pl-8 h-8 text-xs font-body" />
+                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <Switch checked={mostrarInativos} onCheckedChange={setMostrarInativos} />
+                  <span className="text-xs font-body text-muted-foreground">Incluir inativos</span>
+                </label>
+              </div>
+              {funcView.length === 0 ? (
+                <p className="text-sm font-body py-2 text-muted-foreground">
+                  {busca.trim()
+                    ? 'Nenhum funcionário com esse nome.'
+                    : soPendencias
+                      ? 'Nenhuma pendência nos funcionários ✓'
+                      : 'Nenhum funcionário no filtro.'}
+                </p>
+              ) : funcView.map(({ emp, pdocs, r }) => (
+                <FuncionarioItem
+                  key={emp.id} emp={emp} pdocs={pdocs} resumo={r} keyOf={pessoaKey(emp)}
+                  statusMap={statusMap} actions={actions} soPendencias={soPendencias}
+                  open={abertos.has(emp.id)} onToggle={() => toggleFunc(emp.id)}
+                />
+              ))}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -492,7 +520,7 @@ export default function Sst() {
   const obraAtual = obras.find((o) => o.id === obraSel) ?? obras[0];
 
   const empregadosDoAtual = useMemo(
-    () => (empreiteiroAtual ? empregados.filter((e) => e.empreiteiro_id === empreiteiroAtual.id && e.ativo) : []),
+    () => (empreiteiroAtual ? empregados.filter((e) => e.empreiteiro_id === empreiteiroAtual.id) : []),
     [empreiteiroAtual, empregados],
   );
 
