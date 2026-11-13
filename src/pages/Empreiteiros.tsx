@@ -32,8 +32,9 @@ interface EmpregadoForm {
   rg: string;
   telefone: string;
   ativo: boolean;
+  is_mei: boolean;
 }
-const emptyEmpregado: EmpregadoForm = { nome_completo: '', cpf: '', rg: '', telefone: '', ativo: true };
+const emptyEmpregado: EmpregadoForm = { nome_completo: '', cpf: '', rg: '', telefone: '', ativo: true, is_mei: false };
 
 function EmpregadosDialog({
   empreiteiroId, titulo, empregados, open, onOpenChange,
@@ -83,6 +84,7 @@ function EmpregadosDialog({
         rg: form.rg || null,
         telefone: form.telefone || null,
         ativo: form.ativo,
+        is_mei: empreiteiroId ? form.is_mei : false,
         foto_path: null,
         documento_path: null,
         created_by: user!.id,
@@ -102,6 +104,7 @@ function EmpregadosDialog({
         rg: form.rg || null,
         telefone: form.telefone || null,
         ativo: form.ativo,
+        is_mei: empreiteiroId ? form.is_mei : false,
       });
       const updates = await uploadFiles(id);
       if (Object.keys(updates).length) await updateEmpregado(id, updates);
@@ -127,7 +130,7 @@ function EmpregadosDialog({
 
   const openEdit = (emp: Empregado) => {
     setEditing(emp);
-    setForm({ nome_completo: emp.nome_completo, cpf: emp.cpf || '', rg: emp.rg || '', telefone: emp.telefone || '', ativo: emp.ativo });
+    setForm({ nome_completo: emp.nome_completo, cpf: emp.cpf || '', rg: emp.rg || '', telefone: emp.telefone || '', ativo: emp.ativo, is_mei: emp.is_mei ?? false });
     setFotoFile(null); setDocFile(null);
     setFormOpen(true);
   };
@@ -167,6 +170,7 @@ function EmpregadosDialog({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-body font-medium truncate">{emp.nome_completo}</span>
+                      {emp.is_mei && <Badge variant="outline" className="text-[10px]">MEI</Badge>}
                       {!emp.ativo && <Badge variant="outline" className="text-[10px]">inativo</Badge>}
                     </div>
                     <div className="text-xs text-muted-foreground font-body flex flex-wrap gap-x-3">
@@ -229,6 +233,15 @@ function EmpregadosDialog({
                   {editing?.documento_path && !docFile && <p className="text-[10px] text-muted-foreground font-body">Já tem documento — envie outro para trocar.</p>}
                 </div>
               </div>
+              {empreiteiroId && (
+                <div className="flex items-center gap-2 rounded-md border border-border p-2">
+                  <Switch checked={form.is_mei} onCheckedChange={v => setForm({ ...form, is_mei: v })} />
+                  <div>
+                    <Label className="font-body">Funcionário MEI</Label>
+                    <p className="text-[10px] text-muted-foreground font-body">No SST: dispensa CTPS, ficha de registro, O.S. e ASO; exige cartão CNPJ do MEI + contrato empreiteira×MEI.</p>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2"><Switch checked={form.ativo} onCheckedChange={v => setForm({ ...form, ativo: v })} /><Label className="font-body">Ativo</Label></div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={closeForm} className="font-body">Cancelar</Button>
