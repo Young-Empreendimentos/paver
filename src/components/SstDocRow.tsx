@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { Upload, FileText, Loader2, MessageSquarePlus, MessageSquareText } from 'lucide-react';
+import { Upload, FileText, Loader2, MessageSquarePlus, MessageSquareText, Link2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -19,15 +20,17 @@ interface SstDocRowProps {
   onUpload: (file: File) => void;
   onOpenFile: (path: string) => void;
   onObservacao: (texto: string) => void;
+  onLink: (url: string) => void;
 }
 
 export function SstDocRow({
-  doc, status, busy, showFreq, onStatus, onUpload, onOpenFile, onObservacao,
+  doc, status, busy, showFreq, onStatus, onUpload, onOpenFile, onObservacao, onLink,
 }: SstDocRowProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const valor: SstStatusValor = status?.status ?? 'pendente';
   const meta = SST_STATUS_META[valor];
   const [obs, setObs] = useState(status?.observacao ?? '');
+  const [linkInput, setLinkInput] = useState(status?.link_url ?? '');
   const temObs = !!status?.observacao?.trim();
 
   return (
@@ -48,6 +51,16 @@ export function SstDocRow({
           >
             <FileText className="h-3 w-3 shrink-0" />
             <span className="truncate">{status.arquivo_nome}</span>
+          </button>
+        )}
+        {status?.link_url && (
+          <button
+            type="button"
+            onClick={() => window.open(status.link_url!, '_blank', 'noopener')}
+            className="mt-0.5 flex items-center gap-1 text-[11px] text-accent font-body hover:underline max-w-full"
+          >
+            <ExternalLink className="h-3 w-3 shrink-0" />
+            <span className="truncate">Abrir link</span>
           </button>
         )}
       </div>
@@ -76,6 +89,25 @@ export function SstDocRow({
             <Button size="sm" className="font-body" onClick={() => onObservacao(obs.trim())} disabled={busy}>
               Salvar observação
             </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Link externo */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" title={status?.link_url ? 'Editar link' : 'Colar link do documento'}>
+            <Link2 className={`h-4 w-4 ${status?.link_url ? 'text-accent' : 'text-muted-foreground'}`} />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 space-y-2" align="end">
+          <p className="text-xs font-body text-muted-foreground">Link do documento (ex.: Google Drive)</p>
+          <Input value={linkInput} onChange={(e) => setLinkInput(e.target.value)} placeholder="https://..." className="font-body text-sm" />
+          <div className="flex justify-between items-center">
+            {status?.link_url
+              ? <Button size="sm" variant="ghost" className="font-body text-destructive" onClick={() => { setLinkInput(''); onLink(''); }} disabled={busy}>Remover</Button>
+              : <span />}
+            <Button size="sm" className="font-body" onClick={() => onLink(linkInput.trim())} disabled={busy}>Salvar link</Button>
           </div>
         </PopoverContent>
       </Popover>
