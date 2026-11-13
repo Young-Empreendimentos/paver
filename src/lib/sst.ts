@@ -58,6 +58,8 @@ export function medicoesDoMes(ano: number, mes1a12: number): Medicao[] {
 
 /** Um documento por medição aparece nesta medição? (fixo nunca é por medição) */
 export function docAplicaNaMedicao(doc: SstDocumento, m: Medicao): boolean {
+  // Vigência: documento só é exigido a partir da data configurada (medições anteriores não cobram).
+  if (doc.vigencia_inicio && m.data < doc.vigencia_inicio) return false;
   if (doc.frequencia === 'toda_medicao') return true;
   if (doc.frequencia === 'medicao_dia_1') return m.dia === 1;
   if (doc.frequencia === 'medicao_dia_16') return m.dia === 16;

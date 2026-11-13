@@ -709,6 +709,7 @@ export interface SstDocumento {
   exclusivo_mei: boolean;
   ordem: number;
   ativo: boolean;
+  vigencia_inicio?: string | null; // 'YYYY-MM-DD' — exigido só a partir desta medição (null = desde sempre)
   created_by?: string | null;
   created_at: string;
 }

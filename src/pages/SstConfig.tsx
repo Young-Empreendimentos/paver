@@ -33,10 +33,12 @@ interface DocForm {
   exclusivo_mei: boolean;
   ordem: number;
   ativo: boolean;
+  vigencia_inicio: string; // 'YYYY-MM-DD' ou '' (desde sempre)
 }
 const emptyForm: DocForm = {
   nome: '', escopo: 'empresa', frequencia: 'fixo',
   obrigatorio: true, dispensa_mei: false, exclusivo_mei: false, ordem: 0, ativo: true,
+  vigencia_inicio: '',
 };
 
 const GRUPOS: { escopo: SstEscopo; frequencia: SstFrequencia; titulo: string }[] = [
@@ -82,6 +84,7 @@ export default function SstConfig() {
         exclusivo_mei: form.escopo === 'pessoa' ? form.exclusivo_mei : false,
         ordem: Number(form.ordem) || 0,
         ativo: form.ativo,
+        vigencia_inicio: form.frequencia === 'fixo' ? null : (form.vigencia_inicio || null),
       };
       if (editing) await updateSstDocumento(editing.id, payload);
       else await createSstDocumento({ ...payload, created_by: user!.id });
@@ -110,6 +113,7 @@ export default function SstConfig() {
     setForm({
       nome: d.nome, escopo: d.escopo, frequencia: d.frequencia, obrigatorio: d.obrigatorio,
       dispensa_mei: d.dispensa_mei, exclusivo_mei: d.exclusivo_mei, ordem: d.ordem, ativo: d.ativo,
+      vigencia_inicio: d.vigencia_inicio ?? '',
     });
     setDialogOpen(true);
   };
@@ -158,6 +162,11 @@ export default function SstConfig() {
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className={`font-body text-sm truncate ${d.ativo ? '' : 'line-through text-muted-foreground'}`}>{d.nome}</span>
                           {!d.obrigatorio && <Badge variant="secondary" className="text-[10px] font-body">opcional</Badge>}
+                          {d.vigencia_inicio && (
+                            <Badge variant="outline" className="text-[10px] font-body">
+                              a partir de {d.vigencia_inicio.slice(5, 7)}/{d.vigencia_inicio.slice(0, 4)}
+                            </Badge>
+                          )}
                           {d.dispensa_mei && <Badge variant="outline" className="text-[10px] font-body">MEI dispensa</Badge>}
                           {d.exclusivo_mei && <Badge variant="outline" className="text-[10px] font-body">só MEI</Badge>}
                           {!d.ativo && <Badge variant="outline" className="text-[10px] font-body">inativo</Badge>}
@@ -233,6 +242,28 @@ export default function SstConfig() {
                 <Label className="font-body">Obrigatório</Label>
               </div>
             </div>
+            {form.frequencia !== 'fixo' && (
+              <div className="space-y-2">
+                <Label className="font-body">Exigido a partir de (opcional)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={form.vigencia_inicio}
+                    onChange={(e) => setForm({ ...form, vigencia_inicio: e.target.value })}
+                    className="font-body"
+                  />
+                  {form.vigencia_inicio && (
+                    <Button type="button" variant="ghost" size="sm" className="font-body shrink-0"
+                      onClick={() => setForm({ ...form, vigencia_inicio: '' })}>
+                      Limpar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground font-body">
+                  Deixe vazio para exigir desde sempre. Se preencher, medições anteriores a essa data não cobram o documento.
+                </p>
+              </div>
+            )}
             {form.escopo === 'pessoa' && (
               <div className="rounded-md border border-border p-3 space-y-3">
                 <p className="text-xs text-muted-foreground font-body">Regras de funcionário MEI</p>
