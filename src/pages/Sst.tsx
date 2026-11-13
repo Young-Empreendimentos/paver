@@ -54,6 +54,8 @@ function useSstActions() {
     run(k, async () => { await setSstStatus(k, { status: valor }, user!.id); });
   const setObs = (k: SstStatusKey, texto: string) =>
     run(k, async () => { await setSstStatus(k, { observacao: texto || null }, user!.id); toast({ title: 'Observação salva' }); });
+  const setLink = (k: SstStatusKey, url: string) =>
+    run(k, async () => { await setSstStatus(k, { link_url: url || null }, user!.id); toast({ title: url ? 'Link salvo' : 'Link removido' }); });
   const upload = (k: SstStatusKey, file: File) =>
     run(k, async () => {
       const path = `sst/${k.empreiteiro_id ?? 'x'}/${k.empregado_id ?? 'empresa'}/${k.documento_id}/${k.medicao ?? 'fixo'}_${Date.now()}_${slug(file.name)}`;
@@ -66,7 +68,7 @@ function useSstActions() {
     catch (e: any) { toast({ title: 'Erro ao abrir', description: e.message, variant: 'destructive' }); }
   };
 
-  return { busyKey, setStatus, setObs, upload, openFile };
+  return { busyKey, setStatus, setObs, setLink, upload, openFile };
 }
 type SstActions = ReturnType<typeof useSstActions>;
 
@@ -108,6 +110,7 @@ function DocList({
             onUpload={(f) => actions.upload(k, f)}
             onOpenFile={actions.openFile}
             onObservacao={(t) => actions.setObs(k, t)}
+            onLink={(u) => actions.setLink(k, u)}
           />
         );
       })}

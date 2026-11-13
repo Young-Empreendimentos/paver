@@ -722,6 +722,7 @@ export interface SstStatus {
   status: SstStatusValor;
   arquivo_path: string | null;
   arquivo_nome: string | null;
+  link_url: string | null;
   observacao: string | null;
   updated_by?: string | null;
   updated_at: string;
@@ -790,6 +791,7 @@ export interface SstStatusChange {
   status?: SstStatusValor;
   arquivo_path?: string | null;
   arquivo_nome?: string | null;
+  link_url?: string | null;
   observacao?: string | null;
 }
 
@@ -830,6 +832,7 @@ export async function setSstStatus(key: SstStatusKey, changes: SstStatusChange, 
       status: changes.status ?? 'pendente',
       arquivo_path: changes.arquivo_path ?? null,
       arquivo_nome: changes.arquivo_nome ?? null,
+      link_url: changes.link_url ?? null,
       observacao: changes.observacao ?? null,
       updated_by: userId,
     } as any)
