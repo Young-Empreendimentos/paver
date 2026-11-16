@@ -135,19 +135,19 @@ export default function SstConfig() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0">
             <Link to="/sst"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-              <Settings2 className="h-6 w-6 text-accent" /> Configurações SST
+              <Settings2 className="h-6 w-6 text-accent shrink-0" /> Configurações SST
             </h1>
             <p className="text-muted-foreground font-body">Documentos exigidos, frequência e regras de MEI</p>
           </div>
         </div>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-body" onClick={openNew}>
+        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 font-body shrink-0" onClick={openNew}>
           <Plus className="h-4 w-4 mr-2" /> Novo documento
         </Button>
       </div>
@@ -166,10 +166,10 @@ export default function SstConfig() {
                 </CardHeader>
                 <CardContent className="space-y-1">
                   {docs.map((d) => (
-                    <div key={d.id} className="flex items-center gap-2 py-2 border-b border-border last:border-0">
+                    <div key={d.id} className="flex items-start gap-2 py-2 border-b border-border last:border-0">
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className={`font-body text-sm truncate ${d.ativo ? '' : 'line-through text-muted-foreground'}`}>{d.nome}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                          <span className={`font-body text-sm break-words ${d.ativo ? '' : 'line-through text-muted-foreground'}`}>{d.nome}</span>
                           {!d.obrigatorio && <Badge variant="secondary" className="text-[10px] font-body">opcional</Badge>}
                           {d.vigencia_inicio && (
                             <Badge variant="outline" className="text-[10px] font-body">
@@ -231,32 +231,30 @@ export default function SstConfig() {
               <Label className="font-body">Nome *</Label>
               <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required className="font-body" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-body">Escopo</Label>
-                <Select value={form.escopo} onValueChange={(v) => setForm({ ...form, escopo: v as SstEscopo })}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SST_ESCOPOS.map((o) => <SelectItem key={o.value} value={o.value} className="font-body">{o.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-body">Frequência</Label>
-                <Select value={form.frequencia} onValueChange={(v) => setForm({ ...form, frequencia: v as SstFrequencia })}>
-                  <SelectTrigger className="font-body"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SST_FREQUENCIAS.map((o) => <SelectItem key={o.value} value={o.value} className="font-body">{o.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label className="font-body">Escopo</Label>
+              <Select value={form.escopo} onValueChange={(v) => setForm({ ...form, escopo: v as SstEscopo })}>
+                <SelectTrigger className="font-body w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SST_ESCOPOS.map((o) => <SelectItem key={o.value} value={o.value} className="font-body">{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="font-body">Frequência</Label>
+              <Select value={form.frequencia} onValueChange={(v) => setForm({ ...form, frequencia: v as SstFrequencia })}>
+                <SelectTrigger className="font-body w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SST_FREQUENCIAS.map((o) => <SelectItem key={o.value} value={o.value} className="font-body">{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="font-body">Ordem</Label>
                 <Input type="number" value={form.ordem} onChange={(e) => setForm({ ...form, ordem: Number(e.target.value) })} className="font-body" />
               </div>
-              <div className="flex items-end gap-2 pb-2">
+              <div className="flex items-center gap-2 sm:items-end sm:pb-2">
                 <Switch checked={form.obrigatorio} onCheckedChange={(v) => setForm({ ...form, obrigatorio: v })} />
                 <Label className="font-body">Obrigatório</Label>
               </div>
