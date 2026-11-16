@@ -31,12 +31,12 @@ export function SstDocRow({
   const temObs = !!status?.observacao?.trim();
 
   return (
-    <div className="flex items-center gap-2 py-2 border-b border-border last:border-0">
-      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
+    <div className="flex items-start gap-2 py-2 border-b border-border last:border-0">
+      <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} aria-hidden="true" />
 
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-body text-sm truncate">{doc.nome}</span>
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+          <span className="font-body text-sm break-words">{doc.nome}</span>
           {showFreq && <Badge variant="outline" className="text-[10px] font-body">{freqCurta(doc.frequencia)}</Badge>}
           {!doc.obrigatorio && <Badge variant="secondary" className="text-[10px] font-body">opcional</Badge>}
         </div>
