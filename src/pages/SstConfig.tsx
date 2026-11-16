@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   fetchSstDocumentos, createSstDocumento, updateSstDocumento, deleteSstDocumento,
+  fetchSstDocumentosComHistorico,
   type SstDocumento, type SstEscopo, type SstFrequencia,
 } from '@/services/api';
 import { SST_ESCOPOS, SST_FREQUENCIAS } from '@/lib/sst';
@@ -66,9 +67,17 @@ export default function SstConfig() {
     queryFn: () => fetchSstDocumentos(true),
   });
 
+  // Documentos que já têm histórico (status/arquivo lançado): não podem ser excluídos, só desativados.
+  const { data: comHistorico } = useQuery({
+    queryKey: ['sst-docs-com-historico'],
+    queryFn: fetchSstDocumentosComHistorico,
+  });
+  const temHistorico = (d: SstDocumento) => comHistorico?.has(d.id) ?? false;
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['sst-documentos-all'] });
     queryClient.invalidateQueries({ queryKey: ['sst-documentos'] });
+    queryClient.invalidateQueries({ queryKey: ['sst-docs-com-historico'] });
   };
 
   const close = () => { setDialogOpen(false); setEditing(null); setForm(emptyForm); };
@@ -170,6 +179,7 @@ export default function SstConfig() {
                           {d.dispensa_mei && <Badge variant="outline" className="text-[10px] font-body">MEI dispensa</Badge>}
                           {d.exclusivo_mei && <Badge variant="outline" className="text-[10px] font-body">só MEI</Badge>}
                           {!d.ativo && <Badge variant="outline" className="text-[10px] font-body">inativo</Badge>}
+                          {temHistorico(d) && <Badge variant="outline" className="text-[10px] font-body">com histórico</Badge>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -177,23 +187,32 @@ export default function SstConfig() {
                           <Switch checked={d.ativo} onCheckedChange={() => toggleAtivo(d)} />
                         </div>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(d)}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle className="font-heading">Excluir documento?</AlertDialogTitle>
-                              <AlertDialogDescription className="font-body">
-                                "{d.nome}" sairá do catálogo. Se já houver status/arquivos ligados, prefira <b>desativar</b>. Ação irreversível.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteMut.mutate(d.id)} className="bg-destructive text-destructive-foreground font-body">Excluir</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {temHistorico(d) ? (
+                          <span
+                            className="inline-flex h-7 w-7 items-center justify-center text-muted-foreground"
+                            title="Já tem documentos lançados — não dá pra excluir (o histórico seria perdido). Para tirar do controle, desative no botão ao lado."
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                          </span>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="font-heading">Excluir documento?</AlertDialogTitle>
+                                <AlertDialogDescription className="font-body">
+                                  "{d.nome}" sairá do catálogo. Como ainda não tem nenhum documento lançado, nada de histórico é perdido. Ação irreversível.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteMut.mutate(d.id)} className="bg-destructive text-destructive-foreground font-body">Excluir</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -782,6 +782,12 @@ export async function fetchSstStatusDeEmpresas(empreiteiroIds: string[]) {
   return fetchAllPaged<SstStatus>('paver_sst_status', (q) => q.in('empreiteiro_id', empreiteiroIds));
 }
 
+/** Conjunto dos documento_id que já têm histórico (≥1 linha de status). Usado p/ proteger a exclusão. */
+export async function fetchSstDocumentosComHistorico(): Promise<Set<string>> {
+  const rows = await fetchAllPaged<SstStatus>('paver_sst_status');
+  return new Set(rows.map((r) => r.documento_id));
+}
+
 export interface SstStatusKey {
   documento_id: string;
   empreiteiro_id?: string | null;
