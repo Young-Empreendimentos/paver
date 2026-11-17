@@ -67,12 +67,11 @@ export function AppSidebar() {
 
       <SidebarContent className="gap-1">
         <SidebarGroup className="py-1">
-          {!collapsed && <SidebarGroupLabel className="text-sidebar-foreground/40 font-body text-[10px]">MENU</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton asChild size="sm" className="text-sm">
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
@@ -96,7 +95,7 @@ export function AppSidebar() {
               <SidebarMenu className="gap-0.5">
                 {adminItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild size="sm" className="text-sm">
                       <NavLink
                         to={item.url}
                         end={false}
