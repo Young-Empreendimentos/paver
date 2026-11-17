@@ -44,7 +44,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary">
@@ -65,11 +65,11 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent className="gap-1">
+        <SidebarGroup className="py-1">
           {!collapsed && <SidebarGroupLabel className="text-sidebar-foreground/40 font-body text-[10px]">MENU</SidebarGroupLabel>}
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
@@ -90,10 +90,10 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {showAdmin && (
-          <SidebarGroup>
+          <SidebarGroup className="py-1">
             {!collapsed && <SidebarGroupLabel className="text-sidebar-foreground/40 font-body text-[10px]">ADMIN</SidebarGroupLabel>}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {adminItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
@@ -115,7 +115,7 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 space-y-3">
+      <SidebarFooter className="p-3 space-y-2">
         {collapsed ? (
           <SidebarTrigger className="w-full flex items-center justify-center rounded-md border border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground h-9" />
         ) : (
