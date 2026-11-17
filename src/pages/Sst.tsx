@@ -371,7 +371,7 @@ function EmpresaPanel({
                   <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar funcionário..." className="pl-8 h-8 text-xs font-body" />
                 </div>
                 <Select value={filtroFunc} onValueChange={(v) => setFiltroFunc(v as 'ativos' | 'todos' | 'recentes')}>
-                  <SelectTrigger className="h-8 w-full sm:w-[190px] text-xs font-body"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-full sm:w-[215px] text-xs font-body"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ativos" className="text-xs font-body">Só ativos</SelectItem>
                     <SelectItem value="todos" className="text-xs font-body">Todos (com inativos)</SelectItem>
@@ -380,7 +380,7 @@ function EmpresaPanel({
                 </Select>
                 {filtroFunc === 'recentes' && (
                   <Select value={String(periodoDias)} onValueChange={(v) => setPeriodoDias(Number(v))}>
-                    <SelectTrigger className="h-8 w-full sm:w-[120px] text-xs font-body"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-full sm:w-[150px] text-xs font-body"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {[7, 15, 30, 60].map((n) => <SelectItem key={n} value={String(n)} className="text-xs font-body">últimos {n} dias</SelectItem>)}
                     </SelectContent>
@@ -513,7 +513,7 @@ function ObraPanel({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground font-body">Funcionários:</span>
         <Select value={filtroFunc} onValueChange={(v) => setFiltroFunc(v as FiltroFunc)}>
-          <SelectTrigger className="h-9 w-full sm:w-[200px] font-body text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 w-full sm:w-[215px] font-body text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos" className="font-body text-xs">Todos na obra</SelectItem>
             <SelectItem value="ativos" className="font-body text-xs">Só ativos</SelectItem>
@@ -522,7 +522,7 @@ function ObraPanel({
         </Select>
         {filtroFunc === 'recentes' && (
           <Select value={String(periodoDias)} onValueChange={(v) => setPeriodoDias(Number(v))}>
-            <SelectTrigger className="h-9 w-full sm:w-[130px] font-body text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 w-full sm:w-[150px] font-body text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               {[7, 15, 30, 60].map((n) => <SelectItem key={n} value={String(n)} className="font-body text-xs">últimos {n} dias</SelectItem>)}
             </SelectContent>

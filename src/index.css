@@ -101,3 +101,22 @@
     font-family: var(--font-heading);
   }
 }
+
+/* Scrollbar discreto no menu lateral (no lugar da barra padrão "estourada") */
+[data-sidebar="content"] {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--sidebar-foreground) / 0.22) transparent;
+}
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 6px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--sidebar-foreground) / 0.22);
+  border-radius: 9999px;
+}
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--sidebar-foreground) / 0.38);
+}
