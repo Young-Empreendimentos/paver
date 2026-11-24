@@ -38,16 +38,30 @@ function fmtNum(v: number) {
 
 // ---------------- Saldo ----------------
 function SaldoTab({ itens, movimentos }: { itens: EstoqueItem[]; movimentos: EstoqueMovimento[] }) {
+  // Custo médio PONDERADO das entradas que têm preço (cada compra entra num preço diferente).
   const porItem = useMemo(() => {
-    const m = new Map<string, { entrada: number; saida: number }>();
+    const m = new Map<string, { entrada: number; saida: number; valorEntrada: number; qtdComPreco: number }>();
     for (const mv of movimentos) {
-      if (!m.has(mv.item_id)) m.set(mv.item_id, { entrada: 0, saida: 0 });
+      if (!m.has(mv.item_id)) m.set(mv.item_id, { entrada: 0, saida: 0, valorEntrada: 0, qtdComPreco: 0 });
       const o = m.get(mv.item_id)!;
-      if (mv.tipo === 'entrada') o.entrada += Number(mv.quantidade) || 0;
-      else o.saida += Number(mv.quantidade) || 0;
+      const q = Number(mv.quantidade) || 0;
+      if (mv.tipo === 'entrada') {
+        o.entrada += q;
+        if (mv.valor_unitario != null) { o.valorEntrada += q * Number(mv.valor_unitario); o.qtdComPreco += q; }
+      } else o.saida += q;
     }
     return m;
   }, [movimentos]);
+
+  const linhas = useMemo(() => itens.map((i) => {
+    const o = porItem.get(i.id) || { entrada: 0, saida: 0, valorEntrada: 0, qtdComPreco: 0 };
+    const saldo = o.entrada - o.saida;
+    const media = o.qtdComPreco > 0 ? o.valorEntrada / o.qtdComPreco : null;
+    const valor = media != null ? saldo * media : null;
+    return { i, saldo, entrada: o.entrada, saida: o.saida, media, valor };
+  }), [itens, porItem]);
+
+  const totalValor = linhas.reduce((s, l) => s + (l.valor && l.valor > 0 ? l.valor : 0), 0);
 
   if (itens.length === 0) {
     return <Card><CardContent className="py-10 text-center text-sm text-muted-foreground font-body">Nenhum item no catálogo. Configure em <Link to="/estoque/config" className="underline">Itens de estoque</Link>.</CardContent></Card>;
@@ -55,7 +69,7 @@ function SaldoTab({ itens, movimentos }: { itens: EstoqueItem[]; movimentos: Est
 
   return (
     <Card>
-      <CardContent className="p-0">
+      <CardContent className="p-0 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -63,21 +77,27 @@ function SaldoTab({ itens, movimentos }: { itens: EstoqueItem[]; movimentos: Est
               <TableHead className="font-heading text-right">Entradas</TableHead>
               <TableHead className="font-heading text-right">Saídas</TableHead>
               <TableHead className="font-heading text-right">Saldo</TableHead>
+              <TableHead className="font-heading text-right">Custo médio</TableHead>
+              <TableHead className="font-heading text-right">Valor em estoque</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {itens.map((i) => {
-              const o = porItem.get(i.id) || { entrada: 0, saida: 0 };
-              const saldo = o.entrada - o.saida;
-              return (
-                <TableRow key={i.id}>
-                  <TableCell className="font-body">{itemLabel(i)} <span className="text-xs text-muted-foreground">({i.unidade})</span></TableCell>
-                  <TableCell className="font-body text-right text-emerald-700 dark:text-emerald-400">{fmtNum(o.entrada)}</TableCell>
-                  <TableCell className="font-body text-right text-amber-700 dark:text-amber-400">{fmtNum(o.saida)}</TableCell>
-                  <TableCell className={`font-body text-right font-semibold ${saldo < 0 ? 'text-destructive' : ''}`}>{fmtNum(saldo)}</TableCell>
-                </TableRow>
-              );
-            })}
+            {linhas.map(({ i, saldo, entrada, saida, media, valor }) => (
+              <TableRow key={i.id}>
+                <TableCell className="font-body">{itemLabel(i)} <span className="text-xs text-muted-foreground">({i.unidade})</span></TableCell>
+                <TableCell className="font-body text-right text-emerald-700 dark:text-emerald-400">{fmtNum(entrada)}</TableCell>
+                <TableCell className="font-body text-right text-amber-700 dark:text-amber-400">{fmtNum(saida)}</TableCell>
+                <TableCell className={`font-body text-right font-semibold ${saldo < 0 ? 'text-destructive' : ''}`}>{fmtNum(saldo)}</TableCell>
+                <TableCell className="font-body text-right text-xs">{media == null ? '—' : 'R$ ' + fmtNum(media)}</TableCell>
+                <TableCell className="font-body text-right">{valor == null ? '—' : 'R$ ' + fmtNum(valor)}</TableCell>
+              </TableRow>
+            ))}
+            {totalValor > 0 && (
+              <TableRow className="border-t-2 border-border">
+                <TableCell colSpan={5} className="font-body text-right font-semibold">Total em estoque</TableCell>
+                <TableCell className="font-body text-right font-semibold">R$ {fmtNum(totalValor)}</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>
