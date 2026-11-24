@@ -850,9 +850,12 @@ export async function setSstStatus(key: SstStatusKey, changes: SstStatusChange, 
 }
 
 /** IDs dos funcionários que apareceram em diários da obra a partir de `desdeISO` (YYYY-MM-DD). */
-export async function fetchEmpregadosQueTrabalharam(obraId: string, desdeISO: string): Promise<Set<string>> {
-  const diarios = await fetchAllPaged<{ id: string }>('paver_diarios', (q) =>
-    q.eq('obra_id', obraId).gte('data', desdeISO));
+export async function fetchEmpregadosQueTrabalharam(obraId: string, desdeISO: string, ateISO?: string): Promise<Set<string>> {
+  const diarios = await fetchAllPaged<{ id: string }>('paver_diarios', (q) => {
+    let qq = q.eq('obra_id', obraId).gte('data', desdeISO);
+    if (ateISO) qq = qq.lte('data', ateISO);
+    return qq;
+  });
   const ids = diarios.map((d) => d.id);
   if (ids.length === 0) return new Set();
   const links = await fetchAllPaged<{ empregado_id: string }>('paver_diario_empregados', (q) =>
@@ -860,9 +863,13 @@ export async function fetchEmpregadosQueTrabalharam(obraId: string, desdeISO: st
   return new Set(links.map((l) => l.empregado_id));
 }
 
-/** IDs dos funcionários que apareceram em QUALQUER diário (todas as obras) a partir de `desdeISO`. */
-export async function fetchEmpregadosQueTrabalharamGeral(desdeISO: string): Promise<Set<string>> {
-  const diarios = await fetchAllPaged<{ id: string }>('paver_diarios', (q) => q.gte('data', desdeISO));
+/** IDs dos funcionários que apareceram em QUALQUER diário (todas as obras) na janela [desdeISO, ateISO]. */
+export async function fetchEmpregadosQueTrabalharamGeral(desdeISO: string, ateISO?: string): Promise<Set<string>> {
+  const diarios = await fetchAllPaged<{ id: string }>('paver_diarios', (q) => {
+    let qq = q.gte('data', desdeISO);
+    if (ateISO) qq = qq.lte('data', ateISO);
+    return qq;
+  });
   const ids = diarios.map((d) => d.id);
   if (ids.length === 0) return new Set();
   const links = await fetchAllPaged<{ empregado_id: string }>('paver_diario_empregados', (q) =>

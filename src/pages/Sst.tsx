@@ -40,6 +40,13 @@ const slug = (s: string) =>
 
 const isPendente = (s: SstStatus | undefined) => (s?.status ?? 'pendente') === 'pendente';
 
+// data 'YYYY-MM-DD' menos N dias → 'YYYY-MM-DD' (janela "últimos N dias" relativa à medição)
+const isoMenosDias = (iso: string, dias: number) => {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() - dias);
+  return d.toISOString().slice(0, 10);
+};
+
 // Documentos de pessoa aplicáveis a um funcionário (com regra MEI e medição)
 const pessoaDocsAplicaveis = (docs: SstDocumento[], emp: Empregado, medicao: Medicao) =>
   docs.filter((d) => d.escopo === 'pessoa' && docPessoaAplica(d, !!emp.is_mei) && (d.frequencia === 'fixo' || docAplicaNaMedicao(d, medicao)));
@@ -265,14 +272,14 @@ function EmpresaPanel({
 
   // Filtro de funcionários: busca por nome + (ativos / todos / trabalharam recentemente) + "só pendências"
   const [busca, setBusca] = useState('');
-  const [filtroFunc, setFiltroFunc] = useState<'ativos' | 'todos' | 'recentes'>('ativos');
-  const [periodoDias, setPeriodoDias] = useState(15);
+  const [filtroFunc, setFiltroFunc] = useState<'ativos' | 'todos' | 'recentes'>('recentes');
+  const [periodoDias, setPeriodoDias] = useState(30);
   const empregadosAtivos = useMemo(() => empregados.filter((e) => e.ativo), [empregados]);
 
-  const desdeISO = useMemo(() => { const d = new Date(); d.setDate(d.getDate() - periodoDias); return d.toISOString().slice(0, 10); }, [periodoDias]);
+  const desdeISO = useMemo(() => isoMenosDias(medicao.data, periodoDias), [medicao.data, periodoDias]);
   const { data: trabSet } = useQuery({
-    queryKey: ['sst-trab-geral', desdeISO],
-    queryFn: () => fetchEmpregadosQueTrabalharamGeral(desdeISO),
+    queryKey: ['sst-trab-geral', desdeISO, medicao.data],
+    queryFn: () => fetchEmpregadosQueTrabalharamGeral(desdeISO, medicao.data),
     enabled: filtroFunc === 'recentes',
   });
 
@@ -463,10 +470,10 @@ function ObraPanel({
   soPendencias: boolean;
   onAbrir: (empreiteiroId: string) => void;
 }) {
-  const [filtroFunc, setFiltroFunc] = useState<FiltroFunc>('ativos');
-  const [periodoDias, setPeriodoDias] = useState(15);
+  const [filtroFunc, setFiltroFunc] = useState<FiltroFunc>('recentes');
+  const [periodoDias, setPeriodoDias] = useState(30);
 
-  const desdeISO = useMemo(() => { const d = new Date(); d.setDate(d.getDate() - periodoDias); return d.toISOString().slice(0, 10); }, [periodoDias]);
+  const desdeISO = useMemo(() => isoMenosDias(medicao.data, periodoDias), [medicao.data, periodoDias]);
 
   const empreiteirosNaObra = useMemo(() => empreiteiros.filter((e) => {
     if (!e.ativo) return false;
@@ -484,8 +491,8 @@ function ObraPanel({
   const statusMap = useMemo(() => indexStatus(statusRows), [statusRows]);
 
   const { data: workedSet } = useQuery({
-    queryKey: ['sst-obra-recentes', obraId, desdeISO],
-    queryFn: () => fetchEmpregadosQueTrabalharam(obraId, desdeISO),
+    queryKey: ['sst-obra-recentes', obraId, desdeISO, medicao.data],
+    queryFn: () => fetchEmpregadosQueTrabalharam(obraId, desdeISO, medicao.data),
     enabled: filtroFunc === 'recentes',
   });
 
@@ -509,7 +516,9 @@ function ObraPanel({
     return { e, emps, resumo, faltas };
   }), [empreiteirosNaObra, docs, medicao, statusMap, filtroFunc, workedSet]);
 
-  const visiveis = soPendencias ? cards.filter((c) => c.resumo.pendente > 0) : cards;
+  let visiveis = soPendencias ? cards.filter((c) => c.resumo.pendente > 0) : cards;
+  // Só mostra empreiteiros que trabalharam na janela (quem não trabalhou some)
+  if (filtroFunc === 'recentes') visiveis = visiveis.filter((c) => c.emps.length > 0);
 
   return (
     <div className="space-y-4">
