@@ -1,6 +1,6 @@
 import CelebracaoVenda from "@/components/CelebracaoVenda";
 import { supabase } from "@/integrations/supabase/client";
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ComponentType } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -9,28 +9,39 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Layout } from '@/components/Layout';
+import { RouteErrorBoundary, reloadOnceForChunk } from '@/components/ErrorBoundary';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const DashboardServicos = lazy(() => import('./pages/DashboardServicos'));
-const Eap = lazy(() => import('./pages/Eap'));
-const Relatorios = lazy(() => import('./pages/Relatorios'));
-const RelatorioFotografico = lazy(() => import('./pages/RelatorioFotografico'));
-const LinhaBalancoPage = lazy(() => import('./pages/LinhaBalanco'));
-const DatasEap = lazy(() => import('./pages/DatasEap'));
-const Dependencias = lazy(() => import('./pages/Dependencias'));
-const DiarioObra = lazy(() => import('./pages/DiarioObra'));
-const DiarioDetalhe = lazy(() => import('./pages/DiarioDetalhe'));
-const DiarioObraNovo = lazy(() => import('./pages/DiarioObraNovo'));
-const AdminObras = lazy(() => import('./pages/AdminObras'));
-const Empreiteiros = lazy(() => import('./pages/Empreiteiros'));
-const Sst = lazy(() => import('./pages/Sst'));
-const SstConfig = lazy(() => import('./pages/SstConfig'));
-const Estoque = lazy(() => import('./pages/Estoque'));
-const EstoqueConfig = lazy(() => import('./pages/EstoqueConfig'));
-const Usuarios = lazy(() => import('./pages/Usuarios'));
-const Login = lazy(() => import('./pages/Login'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const NotFound = lazy(() => import('./pages/NotFound'));
+// Carrega a página; se o chunk sumiu (deploy novo), recarrega 1x em vez de quebrar na tela branca.
+function lazyWithReload<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(() =>
+    factory().catch((err) => {
+      if (reloadOnceForChunk()) return new Promise<{ default: T }>(() => {}); // vai recarregar; segura o render
+      throw err; // recarregou há pouco: deixa o ErrorBoundary mostrar o aviso
+    }),
+  );
+}
+
+const Dashboard = lazyWithReload(() => import('./pages/Dashboard'));
+const DashboardServicos = lazyWithReload(() => import('./pages/DashboardServicos'));
+const Eap = lazyWithReload(() => import('./pages/Eap'));
+const Relatorios = lazyWithReload(() => import('./pages/Relatorios'));
+const RelatorioFotografico = lazyWithReload(() => import('./pages/RelatorioFotografico'));
+const LinhaBalancoPage = lazyWithReload(() => import('./pages/LinhaBalanco'));
+const DatasEap = lazyWithReload(() => import('./pages/DatasEap'));
+const Dependencias = lazyWithReload(() => import('./pages/Dependencias'));
+const DiarioObra = lazyWithReload(() => import('./pages/DiarioObra'));
+const DiarioDetalhe = lazyWithReload(() => import('./pages/DiarioDetalhe'));
+const DiarioObraNovo = lazyWithReload(() => import('./pages/DiarioObraNovo'));
+const AdminObras = lazyWithReload(() => import('./pages/AdminObras'));
+const Empreiteiros = lazyWithReload(() => import('./pages/Empreiteiros'));
+const Sst = lazyWithReload(() => import('./pages/Sst'));
+const SstConfig = lazyWithReload(() => import('./pages/SstConfig'));
+const Estoque = lazyWithReload(() => import('./pages/Estoque'));
+const EstoqueConfig = lazyWithReload(() => import('./pages/EstoqueConfig'));
+const Usuarios = lazyWithReload(() => import('./pages/Usuarios'));
+const Login = lazyWithReload(() => import('./pages/Login'));
+const ResetPassword = lazyWithReload(() => import('./pages/ResetPassword'));
+const NotFound = lazyWithReload(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
 
@@ -59,6 +70,7 @@ const App = () => (
       <CelebracaoVenda supabase={supabase} sistema="Paver" somUrl="/sons/venda-celebracao.mp3" />
       <BrowserRouter>
         <AuthProvider>
+          <RouteErrorBoundary>
           <Suspense fallback={<AppLoadingFallback />}>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -100,6 +112,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </RouteErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
