@@ -890,12 +890,37 @@ export interface EstoqueMovimento {
   obra_id: string;
   item_id: string;
   diario_id: string | null;
+  nota_id?: string | null;
   tipo: EstoqueTipoMov;
   quantidade: number;
   data: string; // YYYY-MM-DD
   observacao: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface EstoqueNota {
+  id: string;
+  obra_id: string;
+  arquivo_path: string | null;
+  numero: string | null;
+  fornecedor: string | null;
+  data_emissao: string | null;
+  valor_total: number | null;
+  status: string;
+  observacao: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/** Produtos/itens extraídos de uma NF pela IA (edge function estoque-extrair-nf). */
+export interface NfExtraida {
+  numero: string | null;
+  fornecedor: string | null;
+  data_emissao: string | null;
+  valor_total: number | null;
+  itens: { descricao: string; quantidade: number; unidade: string; valor_unitario: number | null }[];
+  error?: string;
 }
 
 export interface EstoqueInventario {
@@ -1005,4 +1030,78 @@ export async function updateInventarioItem(id: string, updates: Partial<EstoqueI
   const { data, error } = await paverDb.from('paver_estoque_inventario_itens' as any).update(updates as any).eq('id', id).select().single();
   if (error) throw error;
   return data as unknown as EstoqueInventarioItem;
+}
+
+// ---------- NF de produtos → entradas (edge function estoque-extrair-nf) ----------
+const NF_PREFIX = 'estoque/nf';
+const slugNf = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '_');
+
+/** Upload do PDF da NF no bucket privado; retorna o path. */
+export async function uploadNfPdf(obraId: string, file: File): Promise<string> {
+  const path = `${NF_PREFIX}/${obraId}/${Date.now()}_${slugNf(file.name)}`;
+  return uploadPrivateFile(EMPREITEIROS_BUCKET, path, file);
+}
+
+/** Chama a IA p/ extrair os produtos da NF (recebe o path do PDF no bucket). */
+export async function extrairNf(path: string): Promise<NfExtraida> {
+  const { data, error } = await supabase.functions.invoke('estoque-extrair-nf', { body: { path } });
+  if (error) throw error;
+  const d = data as NfExtraida;
+  if (d?.error) throw new Error(d.error);
+  return d;
+}
+
+export async function createEstoqueNota(d: Omit<EstoqueNota, 'id' | 'created_at'>) {
+  const { data, error } = await paverDb.from('paver_estoque_notas' as any).insert(d as any).select().single();
+  if (error) throw error;
+  return data as unknown as EstoqueNota;
+}
+export async function fetchEstoqueNotas(obraId: string) {
+  const { data, error } = await paverDb.from('paver_estoque_notas' as any).select('*').eq('obra_id', obraId).order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []) as unknown as EstoqueNota[];
+}
+
+/** Mapa lembrado: descrição da NF (normalizada) -> item_id do catálogo. */
+export const normalizaDescNf = (s: string) => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+export async function fetchEstoqueNfMapa(): Promise<Map<string, string>> {
+  const { data, error } = await paverDb.from('paver_estoque_nf_mapa' as any).select('descricao_nf,item_id');
+  if (error) throw error;
+  const m = new Map<string, string>();
+  for (const r of (data || []) as any[]) m.set(r.descricao_nf, r.item_id);
+  return m;
+}
+
+/**
+ * Importa a NF: cria a nota, gera as ENTRADAS de estoque (ligadas à nota) e
+ * memoriza o vínculo descrição→item pra próxima vez.
+ */
+export async function importarNf(params: {
+  obraId: string;
+  userId: string;
+  arquivoPath: string | null;
+  numero: string | null;
+  fornecedor: string | null;
+  dataEmissao: string | null;
+  valorTotal: number | null;
+  data: string;
+  linhas: { item_id: string; descricao_nf: string; quantidade: number }[];
+}): Promise<EstoqueNota> {
+  const nota = await createEstoqueNota({
+    obra_id: params.obraId, arquivo_path: params.arquivoPath, numero: params.numero,
+    fornecedor: params.fornecedor, data_emissao: params.dataEmissao, valor_total: params.valorTotal,
+    status: 'importada', observacao: null, created_by: params.userId,
+  });
+  const linhasOk = params.linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
+  const rows = linhasOk.map((l) => ({
+    obra_id: params.obraId, item_id: l.item_id, diario_id: null, nota_id: nota.id,
+    tipo: 'entrada' as const, quantidade: Number(l.quantidade), data: params.data,
+    observacao: params.numero ? `NF ${params.numero}` : 'NF', created_by: params.userId,
+  }));
+  if (rows.length > 0) await insertEstoqueMovimentos(rows);
+  const mapaRows = linhasOk.filter((l) => l.descricao_nf).map((l) => ({ descricao_nf: normalizaDescNf(l.descricao_nf), item_id: l.item_id }));
+  if (mapaRows.length > 0) {
+    await paverDb.from('paver_estoque_nf_mapa' as any).upsert(mapaRows as any, { onConflict: 'descricao_nf' }).then(() => {}, () => {});
+  }
+  return nota;
 }
