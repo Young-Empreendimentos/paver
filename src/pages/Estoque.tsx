@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Boxes, Settings2, Loader2, ArrowDownToLine, ArrowUpFromLine, ClipboardCheck,
-  Plus, Camera, ArrowLeft, AlertTriangle, CheckCircle2, Receipt, Upload, Sparkles, Trash2, FileText,
+  Plus, Camera, ArrowLeft, AlertTriangle, CheckCircle2, Receipt, Upload, Sparkles, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,7 @@ import {
   fetchObras, fetchEstoqueItens, fetchEstoqueMovimentos, fetchInventarios, fetchInventarioItens,
   createInventario, deleteInventario, insertInventarioItens, updateInventarioItem,
   uploadPrivateFile, getSignedUrl, removeStorageFile, EMPREITEIROS_BUCKET,
-  uploadNfPdf, extrairNf, fetchEstoqueNfMapa, fetchEstoqueNotas, importarNf, normalizaDescNf,
+  uploadNfPdf, extrairNf, fetchEstoqueNfMapa, fetchEstoqueNotas, lancarEntradaEstoque, normalizaDescNf,
   type EstoqueItem, type EstoqueMovimento, type EstoqueInventario, type EstoqueInventarioItem,
 } from '@/services/api';
 
@@ -332,149 +332,161 @@ function InventarioTab({ obraId, itens, saldoMap }: { obraId: string; itens: Est
   );
 }
 
-// ---------------- Nota Fiscal (IA lê o PDF e vira entrada) ----------------
+// ---------------- Adicionar entrada (manual e/ou NF/recibo em PDF) ----------------
 type NfLinha = { descricao: string; unidade: string; quantidade: string; item_id: string };
 
-function NfTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] }) {
+function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const [lendo, setLendo] = useState(false);
-  const [importando, setImportando] = useState(false);
   const [arquivoPath, setArquivoPath] = useState<string | null>(null);
-  const [meta, setMeta] = useState({ numero: '', fornecedor: '', data_emissao: '', valor_total: '' });
+  const [lendo, setLendo] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [meta, setMeta] = useState({ numero: '', fornecedor: '', data_emissao: '' });
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [linhas, setLinhas] = useState<NfLinha[]>([]);
-  const [lido, setLido] = useState(false);
 
   const { data: mapa } = useQuery({ queryKey: ['estoque-nf-mapa'], queryFn: fetchEstoqueNfMapa });
   const { data: notas = [] } = useQuery({ queryKey: ['estoque-notas', obraId], queryFn: () => fetchEstoqueNotas(obraId), enabled: !!obraId });
 
+  const isPdf = !!file && file.type === 'application/pdf';
   const autoItem = (desc: string): string => {
     const d = normalizaDescNf(desc);
     const m = mapa?.get(d);
     if (m && itens.some((i) => i.id === m)) return m;
-    const hit = itens.find((i) => d.includes(i.nome.toLowerCase()));
+    const hit = itens.find((i) => i.nome && d.includes(i.nome.toLowerCase()));
     return hit?.id ?? '';
   };
 
-  const ler = async () => {
-    if (!file) return;
+  const lerPdf = async () => {
+    if (!file || !isPdf) return;
     setLendo(true);
     try {
-      const path = await uploadNfPdf(obraId, file);
+      const path = arquivoPath ?? (await uploadNfPdf(obraId, file));
       setArquivoPath(path);
       const ex = await extrairNf(path);
-      setMeta({ numero: ex.numero ?? '', fornecedor: ex.fornecedor ?? '', data_emissao: ex.data_emissao ?? '', valor_total: ex.valor_total == null ? '' : String(ex.valor_total) });
-      setLinhas((ex.itens ?? []).map((it) => ({ descricao: it.descricao ?? '', unidade: it.unidade ?? '', quantidade: it.quantidade == null ? '' : String(it.quantidade), item_id: autoItem(it.descricao ?? '') })));
-      setLido(true);
-      if ((ex.itens ?? []).length === 0) toast({ title: 'Nenhum produto encontrado', description: 'Confira o PDF.', variant: 'destructive' });
+      if (ex.numero || ex.fornecedor || ex.data_emissao) setMeta({ numero: ex.numero ?? '', fornecedor: ex.fornecedor ?? '', data_emissao: ex.data_emissao ?? '' });
+      if (ex.data_emissao) setData(ex.data_emissao);
+      const novas = (ex.itens ?? []).map((it) => ({ descricao: it.descricao ?? '', unidade: it.unidade ?? '', quantidade: it.quantidade == null ? '' : String(it.quantidade), item_id: autoItem(it.descricao ?? '') }));
+      setLinhas((prev) => [...prev, ...novas]);
+      toast(novas.length ? { title: `${novas.length} item(ns) lido(s) da NF` } : { title: 'Nenhum produto encontrado', description: 'Confira o PDF ou lance manual.', variant: 'destructive' });
     } catch (e: any) { toast({ title: 'Erro ao ler a NF', description: e.message, variant: 'destructive' }); }
     finally { setLendo(false); }
   };
 
+  const addLinha = () => setLinhas((prev) => [...prev, { descricao: '', unidade: '', quantidade: '', item_id: '' }]);
   const setLinha = (idx: number, patch: Partial<NfLinha>) => setLinhas((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   const removeLinha = (idx: number) => setLinhas((prev) => prev.filter((_, i) => i !== idx));
-  const limpar = () => { setFile(null); setArquivoPath(null); setLido(false); setLinhas([]); setMeta({ numero: '', fornecedor: '', data_emissao: '', valor_total: '' }); };
+  const limpar = () => { setFile(null); setArquivoPath(null); setLinhas([]); setMeta({ numero: '', fornecedor: '', data_emissao: '' }); setData(new Date().toISOString().slice(0, 10)); };
 
   const prontas = linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
-  const semVinculo = linhas.filter((l) => !l.item_id).length;
+  const semItem = linhas.filter((l) => l.quantidade && !l.item_id).length;
 
-  const importar = async () => {
-    if (prontas.length === 0) { toast({ title: 'Nada para importar', description: 'Vincule ao menos um produto a um item do catálogo.', variant: 'destructive' }); return; }
-    setImportando(true);
+  const salvar = async () => {
+    if (prontas.length === 0) { toast({ title: 'Nada para lançar', description: 'Adicione itens e vincule ao catálogo.', variant: 'destructive' }); return; }
+    setSalvando(true);
     try {
-      const dataEntrada = meta.data_emissao || new Date().toISOString().slice(0, 10);
-      await importarNf({
-        obraId, userId: user!.id, arquivoPath,
-        numero: meta.numero || null, fornecedor: meta.fornecedor || null,
-        dataEmissao: meta.data_emissao || null, valorTotal: meta.valor_total ? Number(meta.valor_total) : null,
-        data: dataEntrada,
-        linhas: prontas.map((l) => ({ item_id: l.item_id, descricao_nf: l.descricao, quantidade: Number(l.quantidade) })),
+      let path = arquivoPath;
+      if (file && !path) path = await uploadNfPdf(obraId, file); // anexa recibo/imagem no salvar
+      await lancarEntradaEstoque({
+        obraId, userId: user!.id, data: data || new Date().toISOString().slice(0, 10), arquivoPath: path,
+        numero: meta.numero || null, fornecedor: meta.fornecedor || null, dataEmissao: meta.data_emissao || null, valorTotal: null,
+        linhas: prontas.map((l) => ({ item_id: l.item_id, descricao_nf: l.descricao || undefined, quantidade: Number(l.quantidade) })),
       });
       qc.invalidateQueries({ queryKey: ['estoque-movimentos', obraId] });
       qc.invalidateQueries({ queryKey: ['estoque-notas', obraId] });
       qc.invalidateQueries({ queryKey: ['estoque-nf-mapa'] });
-      toast({ title: 'NF importada', description: `${prontas.length} entrada(s) lançada(s) no estoque.` });
+      toast({ title: 'Entrada lançada', description: `${prontas.length} item(ns) adicionado(s) ao estoque.` });
       limpar();
-    } catch (e: any) { toast({ title: 'Erro ao importar', description: e.message, variant: 'destructive' }); }
-    finally { setImportando(false); }
+    } catch (e: any) { toast({ title: 'Erro ao lançar', description: e.message, variant: 'destructive' }); }
+    finally { setSalvando(false); }
   };
 
   return (
     <div className="space-y-4">
+      {/* Documento (opcional) — NF, recibo… em cima */}
       <Card>
-        <CardContent className="p-4 space-y-3">
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-heading flex items-center gap-2"><Receipt className="h-4 w-4 text-accent" /> Documento (opcional) — NF, recibo…</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <label className="inline-flex items-center gap-2 text-sm font-body cursor-pointer rounded-md border border-border px-3 py-2 hover:bg-muted/40">
-              <Upload className="h-4 w-4" /> {file ? file.name : 'Escolher PDF da NF'}
-              <input type="file" accept="application/pdf" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setLido(false); }} />
+              <Upload className="h-4 w-4" /> {file ? file.name : 'Anexar documento (PDF ou imagem)'}
+              <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setArquivoPath(null); }} />
             </label>
-            <Button onClick={ler} disabled={!file || lendo} className="bg-accent text-accent-foreground hover:bg-accent/90 font-body">
-              {lendo ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />} Ler NF
-            </Button>
-            {lido && <Button variant="ghost" onClick={limpar} className="font-body">Recomeçar</Button>}
+            {isPdf && (
+              <Button onClick={lerPdf} disabled={lendo} variant="outline" className="font-body">
+                {lendo ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />} Ler itens do PDF
+              </Button>
+            )}
+            {file && <Button variant="ghost" onClick={() => { setFile(null); setArquivoPath(null); }} className="font-body text-destructive">Remover</Button>}
           </div>
-          <p className="text-xs text-muted-foreground font-body">A IA lê os produtos do PDF. Sempre confira as quantidades e o vínculo antes de importar.</p>
+          <p className="text-xs text-muted-foreground font-body">Sem documento? Pode lançar só com os itens abaixo. Com PDF de NF, use "Ler itens" pra preencher automático — sempre confira.</p>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div><label className="text-xs text-muted-foreground font-body block mb-1">Nº documento</label><Input value={meta.numero} onChange={(e) => setMeta({ ...meta, numero: e.target.value })} className="h-9 font-body" placeholder="opcional" /></div>
+            <div className="sm:col-span-2"><label className="text-xs text-muted-foreground font-body block mb-1">Fornecedor</label><Input value={meta.fornecedor} onChange={(e) => setMeta({ ...meta, fornecedor: e.target.value })} className="h-9 font-body" placeholder="opcional" /></div>
+            <div><label className="text-xs text-muted-foreground font-body block mb-1">Emissão</label><Input type="date" value={meta.data_emissao} onChange={(e) => setMeta({ ...meta, data_emissao: e.target.value })} className="h-9 font-body" /></div>
+          </div>
         </CardContent>
       </Card>
 
-      {lido && (
-        <>
-          <Card>
-            <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
-              <div><label className="text-xs text-muted-foreground font-body block mb-1">Número</label><Input value={meta.numero} onChange={(e) => setMeta({ ...meta, numero: e.target.value })} className="h-9 font-body" /></div>
-              <div className="sm:col-span-2"><label className="text-xs text-muted-foreground font-body block mb-1">Fornecedor</label><Input value={meta.fornecedor} onChange={(e) => setMeta({ ...meta, fornecedor: e.target.value })} className="h-9 font-body" /></div>
-              <div><label className="text-xs text-muted-foreground font-body block mb-1">Emissão</label><Input type="date" value={meta.data_emissao} onChange={(e) => setMeta({ ...meta, data_emissao: e.target.value })} className="h-9 font-body" /></div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-heading flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Produtos da NF — confira e vincule ao catálogo</CardTitle></CardHeader>
-            <CardContent className="p-0 overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="font-heading">Produto (NF)</TableHead>
-                    <TableHead className="font-heading text-right">Qtd</TableHead>
-                    <TableHead className="font-heading">Un</TableHead>
-                    <TableHead className="font-heading">Item do catálogo</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {linhas.map((l, idx) => (
-                    <TableRow key={idx} className={l.item_id ? '' : 'bg-amber-50/50 dark:bg-amber-950/10'}>
-                      <TableCell className="font-body text-xs max-w-[260px]">{l.descricao || '—'}</TableCell>
-                      <TableCell className="text-right"><Input type="number" step="any" value={l.quantidade} onChange={(e) => setLinha(idx, { quantidade: e.target.value })} className="h-8 w-24 text-xs font-body ml-auto" /></TableCell>
-                      <TableCell className="font-body text-xs">{l.unidade || '—'}</TableCell>
-                      <TableCell>
-                        <Select value={l.item_id} onValueChange={(v) => setLinha(idx, { item_id: v })}>
-                          <SelectTrigger className="h-8 w-[220px] text-xs font-body"><SelectValue placeholder="— vincular —" /></SelectTrigger>
-                          <SelectContent>{itens.map((i) => <SelectItem key={i.id} value={i.id} className="text-xs font-body">{itemLabel(i)}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeLinha(idx)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                    </TableRow>
-                  ))}
-                  {linhas.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground font-body">Nenhum produto lido.</TableCell></TableRow>}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-xs text-muted-foreground font-body">{prontas.length} pronto(s){semVinculo > 0 ? ` · ${semVinculo} sem vínculo (ignorados)` : ''}</span>
-            <Button onClick={importar} disabled={importando || prontas.length === 0} className="bg-accent text-accent-foreground hover:bg-accent/90 font-body">
-              {importando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ArrowDownToLine className="h-4 w-4 mr-1" />} Importar {prontas.length} entrada(s)
-            </Button>
+      {/* Itens da entrada (manual e/ou da leitura) */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm font-heading flex items-center gap-2"><Boxes className="h-4 w-4 text-accent" /> Itens da entrada</CardTitle>
+            <Button size="sm" variant="outline" className="font-body" onClick={addLinha}><Plus className="h-4 w-4 mr-1" /> Adicionar item</Button>
           </div>
-        </>
-      )}
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="font-heading">Item do catálogo</TableHead>
+                <TableHead className="font-heading text-right">Qtd</TableHead>
+                <TableHead className="font-heading">Un</TableHead>
+                <TableHead className="font-heading">Produto (NF)</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {linhas.map((l, idx) => {
+                const un = itens.find((i) => i.id === l.item_id)?.unidade || l.unidade;
+                return (
+                  <TableRow key={idx} className={l.quantidade && !l.item_id ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
+                    <TableCell>
+                      <Select value={l.item_id} onValueChange={(v) => setLinha(idx, { item_id: v })}>
+                        <SelectTrigger className="h-8 w-[220px] text-xs font-body"><SelectValue placeholder="— escolher item —" /></SelectTrigger>
+                        <SelectContent>{itens.map((i) => <SelectItem key={i.id} value={i.id} className="text-xs font-body">{itemLabel(i)}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right"><Input type="number" step="any" value={l.quantidade} onChange={(e) => setLinha(idx, { quantidade: e.target.value })} className="h-8 w-24 text-xs font-body ml-auto" placeholder="0" /></TableCell>
+                    <TableCell className="font-body text-xs">{un || '—'}</TableCell>
+                    <TableCell className="font-body text-xs text-muted-foreground max-w-[200px] truncate">{l.descricao || '—'}</TableCell>
+                    <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeLinha(idx)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                  </TableRow>
+                );
+              })}
+              {linhas.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground font-body">Nenhum item. Clique em "Adicionar item" ou leia um PDF.</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-muted-foreground font-body">Data</label>
+          <Input type="date" value={data} onChange={(e) => setData(e.target.value)} className="h-9 w-[150px] font-body" />
+          <span className="text-xs text-muted-foreground font-body">{prontas.length} p/ lançar{semItem > 0 ? ` · ${semItem} sem item` : ''}</span>
+        </div>
+        <Button onClick={salvar} disabled={salvando || prontas.length === 0} className="bg-accent text-accent-foreground hover:bg-accent/90 font-body">
+          {salvando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ArrowDownToLine className="h-4 w-4 mr-1" />} Lançar {prontas.length} entrada(s)
+        </Button>
+      </div>
 
       {notas.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-heading">Notas importadas</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-heading">Documentos anexados</CardTitle></CardHeader>
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader><TableRow><TableHead className="font-heading">Número</TableHead><TableHead className="font-heading">Fornecedor</TableHead><TableHead className="font-heading">Emissão</TableHead><TableHead className="font-heading text-right">Valor</TableHead></TableRow></TableHeader>
@@ -499,7 +511,7 @@ function NfTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] }) {
 // ---------------- Página ----------------
 export default function Estoque() {
   const [obraSel, setObraSel] = useState('');
-  const [tab, setTab] = useState<'saldo' | 'movimentos' | 'nf' | 'inventario'>('saldo');
+  const [tab, setTab] = useState<'saldo' | 'entrada' | 'movimentos' | 'inventario'>('saldo');
 
   const { data: obras = [] } = useQuery({ queryKey: ['obras'], queryFn: fetchObras });
   const { data: itens = [] } = useQuery({ queryKey: ['estoque-itens'], queryFn: () => fetchEstoqueItens(false) });
@@ -550,8 +562,8 @@ export default function Estoque() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
             <TabsTrigger value="saldo" className="font-body"><Boxes className="h-4 w-4 mr-1.5" /> Saldo</TabsTrigger>
+            <TabsTrigger value="entrada" className="font-body"><Plus className="h-4 w-4 mr-1.5" /> Entrada</TabsTrigger>
             <TabsTrigger value="movimentos" className="font-body"><ArrowDownToLine className="h-4 w-4 mr-1.5" /> Movimentos</TabsTrigger>
-            <TabsTrigger value="nf" className="font-body"><Receipt className="h-4 w-4 mr-1.5" /> Nota Fiscal</TabsTrigger>
             <TabsTrigger value="inventario" className="font-body"><ClipboardCheck className="h-4 w-4 mr-1.5" /> Inventário</TabsTrigger>
           </TabsList>
 
@@ -560,8 +572,8 @@ export default function Estoque() {
           ) : (
             <>
               <TabsContent value="saldo" className="pt-2"><SaldoTab itens={itens} movimentos={movimentos} /></TabsContent>
+              <TabsContent value="entrada" className="pt-2"><EntradaTab obraId={obraId} itens={itens} /></TabsContent>
               <TabsContent value="movimentos" className="pt-2"><MovimentosTab itens={itens} movimentos={movimentos} /></TabsContent>
-              <TabsContent value="nf" className="pt-2"><NfTab obraId={obraId} itens={itens} /></TabsContent>
               <TabsContent value="inventario" className="pt-2"><InventarioTab obraId={obraId} itens={itens} saldoMap={saldoMap} /></TabsContent>
             </>
           )}

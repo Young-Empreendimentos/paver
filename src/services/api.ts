@@ -1073,35 +1073,42 @@ export async function fetchEstoqueNfMapa(): Promise<Map<string, string>> {
 }
 
 /**
- * Importa a NF: cria a nota, gera as ENTRADAS de estoque (ligadas à nota) e
- * memoriza o vínculo descrição→item pra próxima vez.
+ * Lança ENTRADAS de estoque. Documento é OPCIONAL: se houver PDF/recibo anexado
+ * ou algum dado (nº/fornecedor/emissão), cria a nota e liga as entradas a ela;
+ * senão lança só as entradas (manual). Memoriza o vínculo descrição→item.
  */
-export async function importarNf(params: {
+export async function lancarEntradaEstoque(params: {
   obraId: string;
   userId: string;
-  arquivoPath: string | null;
-  numero: string | null;
-  fornecedor: string | null;
-  dataEmissao: string | null;
-  valorTotal: number | null;
   data: string;
-  linhas: { item_id: string; descricao_nf: string; quantidade: number }[];
-}): Promise<EstoqueNota> {
-  const nota = await createEstoqueNota({
-    obra_id: params.obraId, arquivo_path: params.arquivoPath, numero: params.numero,
-    fornecedor: params.fornecedor, data_emissao: params.dataEmissao, valor_total: params.valorTotal,
-    status: 'importada', observacao: null, created_by: params.userId,
-  });
+  arquivoPath?: string | null;
+  numero?: string | null;
+  fornecedor?: string | null;
+  dataEmissao?: string | null;
+  valorTotal?: number | null;
+  linhas: { item_id: string; descricao_nf?: string; quantidade: number }[];
+}): Promise<void> {
   const linhasOk = params.linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
+  if (linhasOk.length === 0) return;
+  const temDoc = !!(params.arquivoPath || params.numero || params.fornecedor || params.dataEmissao || params.valorTotal != null);
+  let notaId: string | null = null;
+  if (temDoc) {
+    const nota = await createEstoqueNota({
+      obra_id: params.obraId, arquivo_path: params.arquivoPath ?? null, numero: params.numero ?? null,
+      fornecedor: params.fornecedor ?? null, data_emissao: params.dataEmissao ?? null, valor_total: params.valorTotal ?? null,
+      status: 'importada', observacao: null, created_by: params.userId,
+    });
+    notaId = nota.id;
+  }
   const rows = linhasOk.map((l) => ({
-    obra_id: params.obraId, item_id: l.item_id, diario_id: null, nota_id: nota.id,
+    obra_id: params.obraId, item_id: l.item_id, diario_id: null, nota_id: notaId,
     tipo: 'entrada' as const, quantidade: Number(l.quantidade), data: params.data,
-    observacao: params.numero ? `NF ${params.numero}` : 'NF', created_by: params.userId,
+    observacao: params.numero ? `NF ${params.numero}` : (temDoc ? 'Documento anexado' : 'Entrada manual'),
+    created_by: params.userId,
   }));
-  if (rows.length > 0) await insertEstoqueMovimentos(rows);
-  const mapaRows = linhasOk.filter((l) => l.descricao_nf).map((l) => ({ descricao_nf: normalizaDescNf(l.descricao_nf), item_id: l.item_id }));
+  await insertEstoqueMovimentos(rows);
+  const mapaRows = linhasOk.filter((l) => l.descricao_nf).map((l) => ({ descricao_nf: normalizaDescNf(l.descricao_nf!), item_id: l.item_id }));
   if (mapaRows.length > 0) {
     await paverDb.from('paver_estoque_nf_mapa' as any).upsert(mapaRows as any, { onConflict: 'descricao_nf' }).then(() => {}, () => {});
   }
-  return nota;
 }
