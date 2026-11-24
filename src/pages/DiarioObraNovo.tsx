@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ArrowRight, Loader2, Sun, Cloud, CloudSun, CloudRain, Snowflake,
   ChevronDown, ChevronRight, Check, Package, Layers, Search, Camera, Upload, X, Trash2,
-  MapPin, Video, SkipForward, ZoomIn, ZoomOut, RotateCcw, Eye, EyeOff,
+  MapPin, Video, SkipForward, ZoomIn, ZoomOut, RotateCcw, Eye, EyeOff, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, fetchEmpreiteiroObras, insertDiarioEmpregados } from '@/services/api';
+import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, fetchEmpreiteiroObras, insertDiarioEmpregados, fetchSstDocumentos, fetchSstStatusDeEmpresas } from '@/services/api';
+import { medicoesDoMes, docAplicaNaMedicao, isDocMedicao, docPessoaAplica, statusValor, indexStatus, type Medicao } from '@/lib/sst';
 
 import { paverDb } from '@/integrations/supabase/paver';
 import CollapsibleClassification from '@/components/CollapsibleClassification';
@@ -467,13 +468,89 @@ export default function DiarioObraNovoPage() {
     return n;
   });
 
+  // --- SST: pendências de documentos (empresa + funcionário) na medição da DATA do diário ---
+  const medicaoDiario = useMemo<Medicao>(() => {
+    const [y, m, d] = String(data).split('-').map(Number);
+    const ano = Number.isFinite(y) ? y : new Date().getFullYear();
+    const mes = Number.isFinite(m) && m >= 1 && m <= 12 ? m : new Date().getMonth() + 1;
+    const dia = Number.isFinite(d) && d < 16 ? 1 : 16;
+    return medicoesDoMes(ano, mes).find(x => x.dia === dia)!;
+  }, [data]);
+
+  const empIdsNaObra = useMemo(
+    () => empregadosPorEmpreiteiro.map(g => g.id).filter(id => id !== '__diaristas__'),
+    [empregadosPorEmpreiteiro],
+  );
+  const { data: sstDocs = [] } = useQuery({ queryKey: ['sst-documentos'], queryFn: () => fetchSstDocumentos(false) });
+  const { data: sstStatusRows = [] } = useQuery({
+    queryKey: ['sst-status-diario', empIdsNaObra.join(',')],
+    queryFn: () => fetchSstStatusDeEmpresas(empIdsNaObra),
+    enabled: empIdsNaObra.length > 0,
+  });
+  const sstStatusMap = useMemo(() => indexStatus(sstStatusRows), [sstStatusRows]);
+
+  // Documentos obrigatórios pendentes da EMPRESA (empreiteiro), por medição
+  const pendEmpresaById = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const id of empIdsNaObra) {
+      const faltas: string[] = [];
+      for (const doc of sstDocs) {
+        if (doc.escopo !== 'empresa' || !doc.obrigatorio) continue;
+        if (isDocMedicao(doc) && !docAplicaNaMedicao(doc, medicaoDiario)) continue;
+        const med = isDocMedicao(doc) ? medicaoDiario.data : null;
+        const s = statusValor(sstStatusMap, doc.id, id, null, med);
+        if ((s?.status ?? 'pendente') === 'pendente') faltas.push(doc.nome);
+      }
+      m.set(id, faltas);
+    }
+    return m;
+  }, [empIdsNaObra, sstDocs, sstStatusMap, medicaoDiario]);
+
+  // Documentos obrigatórios pendentes do FUNCIONÁRIO, por medição (diarista não entra no fluxo de SST)
+  const pendFuncById = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const g of empregadosPorEmpreiteiro) {
+      if (g.id === '__diaristas__') continue;
+      for (const emp of g.itens) {
+        const faltas: string[] = [];
+        for (const doc of sstDocs) {
+          if (doc.escopo !== 'pessoa' || !doc.obrigatorio) continue;
+          if (!docPessoaAplica(doc, !!emp.is_mei)) continue;
+          if (isDocMedicao(doc) && !docAplicaNaMedicao(doc, medicaoDiario)) continue;
+          const med = isDocMedicao(doc) ? medicaoDiario.data : null;
+          const s = statusValor(sstStatusMap, doc.id, emp.empreiteiro_id, emp.id, med);
+          if ((s?.status ?? 'pendente') === 'pendente') faltas.push(doc.nome);
+        }
+        m.set(emp.id, faltas);
+      }
+    }
+    return m;
+  }, [empregadosPorEmpreiteiro, sstDocs, sstStatusMap, medicaoDiario]);
+
   const toggleEmpregado = (id: string) => {
     setSemEmpregados(false);
+    const jaMarcado = empregadosSel.has(id);
     setEmpregadosSel(prev => {
       const n = new Set(prev);
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
+    // Ao MARCAR o funcionário, avisa se há documentos de SST pendentes (dele ou da empresa)
+    if (!jaMarcado) {
+      const emp = todosEmpregados.find(e => e.id === id);
+      const faltasFunc = pendFuncById.get(id) ?? [];
+      const faltasEmp = emp?.empreiteiro_id ? (pendEmpresaById.get(emp.empreiteiro_id) ?? []) : [];
+      if (faltasFunc.length > 0 || faltasEmp.length > 0) {
+        const partes: string[] = [];
+        if (faltasFunc.length) partes.push(`${faltasFunc.length} do funcionário`);
+        if (faltasEmp.length) partes.push(`${faltasEmp.length} da empresa`);
+        toast({
+          title: `Documentos pendentes — ${emp?.nome_completo ?? 'funcionário'}`,
+          description: `${partes.join(' · ')} (${medicaoDiario.label}). Confira no Controle de SST.`,
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   // Confirmação obrigatória: ou marcou empregados, ou declarou "sem empregados neste dia".
@@ -1027,6 +1104,7 @@ export default function DiarioObraNovoPage() {
                 {empregadosPorEmpreiteiro.map(g => {
                   const selInGroup = g.itens.filter(e => empregadosSel.has(e.id)).length;
                   const open = expandedEmpr.has(g.id);
+                  const empresaFaltas = g.id !== '__diaristas__' ? (pendEmpresaById.get(g.id) ?? []) : [];
                   return (
                     <div key={g.id}>
                       <button
@@ -1039,7 +1117,17 @@ export default function DiarioObraNovoPage() {
                           {g.nome}
                           <span className="text-xs text-muted-foreground">({g.itens.length})</span>
                         </span>
-                        {selInGroup > 0 && <Badge variant="secondary" className="text-[10px]">{selInGroup} marcado(s)</Badge>}
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          {empresaFaltas.length > 0 && (
+                            <Badge
+                              className="text-[10px] font-body bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
+                              title={`Documentos da empresa pendentes (${medicaoDiario.label}): ${empresaFaltas.join(', ')}`}
+                            >
+                              <AlertTriangle className="h-3 w-3 mr-0.5" /> {empresaFaltas.length} doc(s) empresa
+                            </Badge>
+                          )}
+                          {selInGroup > 0 && <Badge variant="secondary" className="text-[10px]">{selInGroup} marcado(s)</Badge>}
+                        </span>
                       </button>
                       {open && (
                         <div className="px-3 pb-2 space-y-1">
@@ -1048,6 +1136,17 @@ export default function DiarioObraNovoPage() {
                               <Checkbox checked={empregadosSel.has(emp.id)} onCheckedChange={() => toggleEmpregado(emp.id)} />
                               <EmpregadoAvatar path={emp.foto_path} size={32} />
                               <span className="font-body text-sm truncate">{emp.nome_completo}</span>
+                              {(() => {
+                                const faltas = pendFuncById.get(emp.id) ?? [];
+                                return faltas.length > 0 ? (
+                                  <Badge
+                                    className="ml-auto shrink-0 text-[10px] font-body bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
+                                    title={`Documentos pendentes (${medicaoDiario.label}): ${faltas.join(', ')}`}
+                                  >
+                                    <AlertTriangle className="h-3 w-3 mr-0.5" /> {faltas.length}
+                                  </Badge>
+                                ) : null;
+                              })()}
                             </label>
                           ))}
                         </div>
