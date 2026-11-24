@@ -25,6 +25,8 @@ const AdminObras = lazy(() => import('./pages/AdminObras'));
 const Empreiteiros = lazy(() => import('./pages/Empreiteiros'));
 const Sst = lazy(() => import('./pages/Sst'));
 const SstConfig = lazy(() => import('./pages/SstConfig'));
+const Estoque = lazy(() => import('./pages/Estoque'));
+const EstoqueConfig = lazy(() => import('./pages/EstoqueConfig'));
 const Usuarios = lazy(() => import('./pages/Usuarios'));
 const Login = lazy(() => import('./pages/Login'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -76,6 +78,8 @@ const App = () => (
                 <Route path="/empreiteiros" element={<Empreiteiros />} />
                 <Route path="/sst" element={<Sst />} />
                 <Route path="/sst/config" element={<SstConfig />} />
+                <Route path="/estoque" element={<Estoque />} />
+                <Route path="/estoque/config" element={<EstoqueConfig />} />
                 <Route
                   path="/admin/obras"
                   element={(

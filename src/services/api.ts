@@ -869,3 +869,140 @@ export async function fetchEmpregadosQueTrabalharamGeral(desdeISO: string): Prom
     q.in('diario_id', ids));
   return new Set(links.map((l) => l.empregado_id));
 }
+
+// ======================= Estoque de materiais (pauta #39, item 2) =======================
+export interface EstoqueItem {
+  id: string;
+  nome: string;
+  categoria: string | null;
+  unidade: string;
+  bitola: string | null;
+  armado: boolean | null;
+  ordem: number;
+  ativo: boolean;
+  created_at: string;
+}
+
+export type EstoqueTipoMov = 'entrada' | 'saida';
+
+export interface EstoqueMovimento {
+  id: string;
+  obra_id: string;
+  item_id: string;
+  diario_id: string | null;
+  tipo: EstoqueTipoMov;
+  quantidade: number;
+  data: string; // YYYY-MM-DD
+  observacao: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface EstoqueInventario {
+  id: string;
+  obra_id: string;
+  competencia: string; // YYYY-MM-DD (1º dia do mês)
+  observacao: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface EstoqueInventarioItem {
+  id: string;
+  inventario_id: string;
+  item_id: string;
+  saldo_sistema: number;
+  saldo_fisico: number | null;
+  foto_path: string | null;
+  observacao: string | null;
+  created_at: string;
+}
+
+// ---------- Catálogo de itens (/estoque/config) ----------
+export async function fetchEstoqueItens(incluirInativos = false) {
+  let q: any = paverDb
+    .from('paver_estoque_itens' as any)
+    .select('*')
+    .order('ordem', { ascending: true })
+    .order('nome', { ascending: true });
+  if (!incluirInativos) q = q.eq('ativo', true);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []) as unknown as EstoqueItem[];
+}
+export async function createEstoqueItem(d: Omit<EstoqueItem, 'id' | 'created_at'>) {
+  const { data, error } = await paverDb.from('paver_estoque_itens' as any).insert(d as any).select().single();
+  if (error) throw error;
+  return data as unknown as EstoqueItem;
+}
+export async function updateEstoqueItem(id: string, updates: Partial<EstoqueItem>) {
+  const { data, error } = await paverDb.from('paver_estoque_itens' as any).update(updates as any).eq('id', id).select().single();
+  if (error) throw error;
+  return data as unknown as EstoqueItem;
+}
+export async function deleteEstoqueItem(id: string) {
+  const { error } = await paverDb.from('paver_estoque_itens' as any).delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---------- Movimentos (entrada/saída — lançados no diário) ----------
+export async function fetchEstoqueMovimentos(obraId: string) {
+  return fetchAllPaged<EstoqueMovimento>('paver_estoque_movimentos', (q) => q.eq('obra_id', obraId));
+}
+export async function insertEstoqueMovimentos(rows: Omit<EstoqueMovimento, 'id' | 'created_at'>[]) {
+  if (rows.length === 0) return;
+  const { error } = await paverDb.from('paver_estoque_movimentos' as any).insert(rows as any);
+  if (error) throw error;
+}
+
+/** Saldo atual por item (entradas − saídas) na obra. Map item_id -> saldo. */
+export async function fetchEstoqueSaldo(obraId: string): Promise<Map<string, number>> {
+  const movs = await fetchEstoqueMovimentos(obraId);
+  const m = new Map<string, number>();
+  for (const mv of movs) {
+    const delta = (mv.tipo === 'entrada' ? 1 : -1) * (Number(mv.quantidade) || 0);
+    m.set(mv.item_id, (m.get(mv.item_id) || 0) + delta);
+  }
+  return m;
+}
+
+// ---------- Inventário mensal ----------
+export async function fetchInventarios(obraId: string) {
+  const { data, error } = await paverDb
+    .from('paver_estoque_inventarios' as any)
+    .select('*')
+    .eq('obra_id', obraId)
+    .order('competencia', { ascending: false });
+  if (error) throw error;
+  return (data || []) as unknown as EstoqueInventario[];
+}
+export async function createInventario(obraId: string, competencia: string, userId: string, observacao?: string | null) {
+  const { data, error } = await paverDb
+    .from('paver_estoque_inventarios' as any)
+    .insert({ obra_id: obraId, competencia, observacao: observacao ?? null, created_by: userId } as any)
+    .select().single();
+  if (error) throw error;
+  return data as unknown as EstoqueInventario;
+}
+export async function deleteInventario(id: string) {
+  const { error } = await paverDb.from('paver_estoque_inventarios' as any).delete().eq('id', id);
+  if (error) throw error;
+}
+export async function fetchInventarioItens(inventarioId: string) {
+  const { data, error } = await paverDb
+    .from('paver_estoque_inventario_itens' as any)
+    .select('*')
+    .eq('inventario_id', inventarioId);
+  if (error) throw error;
+  return (data || []) as unknown as EstoqueInventarioItem[];
+}
+export async function insertInventarioItens(rows: Omit<EstoqueInventarioItem, 'id' | 'created_at'>[]) {
+  if (rows.length === 0) return;
+  const { error } = await paverDb.from('paver_estoque_inventario_itens' as any).insert(rows as any);
+  if (error) throw error;
+}
+export async function updateInventarioItem(id: string, updates: Partial<EstoqueInventarioItem>) {
+  const { data, error } = await paverDb.from('paver_estoque_inventario_itens' as any).update(updates as any).eq('id', id).select().single();
+  if (error) throw error;
+  return data as unknown as EstoqueInventarioItem;
+}

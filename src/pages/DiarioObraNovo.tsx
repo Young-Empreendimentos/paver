@@ -22,7 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, fetchEmpreiteiroObras, insertDiarioEmpregados, fetchSstDocumentos, fetchSstStatusDeEmpresas } from '@/services/api';
+import { fetchObras, fetchEapItems, fetchPlantas, createDiario, createFotoLocalizada, uploadFile, EapItem, PlantaObra, fetchEmpreiteiros, fetchAllEmpregados, fetchEmpreiteiroObras, insertDiarioEmpregados, fetchSstDocumentos, fetchSstStatusDeEmpresas, fetchEstoqueItens, insertEstoqueMovimentos, type EstoqueItem } from '@/services/api';
 import { medicoesDoMes, docAplicaNaMedicao, isDocMedicao, docPessoaAplica, statusValor, indexStatus, type Medicao } from '@/lib/sst';
 
 import { paverDb } from '@/integrations/supabase/paver';
@@ -408,6 +408,7 @@ export default function DiarioObraNovoPage() {
   const [groupMode, setGroupMode] = useState<GroupMode>('pacote');
   const [filterText, setFilterText] = useState('');
   const [fotos, setFotos] = useState<FotoDiario[]>([]);
+  const [movEstoque, setMovEstoque] = useState<{ item_id: string; tipo: 'entrada' | 'saida'; quantidade: string; observacao: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pin modal state
@@ -435,6 +436,7 @@ export default function DiarioObraNovoPage() {
   const { data: empreiteiros = [] } = useQuery({ queryKey: ['empreiteiros'], queryFn: fetchEmpreiteiros });
   const { data: todosEmpregados = [] } = useQuery({ queryKey: ['empregados-all'], queryFn: fetchAllEmpregados });
   const { data: empreiteiroObras = [] } = useQuery({ queryKey: ['empreiteiro-obras'], queryFn: fetchEmpreiteiroObras });
+  const { data: estoqueItens = [] } = useQuery({ queryKey: ['estoque-itens'], queryFn: () => fetchEstoqueItens(false) });
 
   // Empregados ativos, filtrados pela obra e agrupados por empreiteiro (+ Diaristas).
   // Regra: empreiteiro sem nenhum vínculo de obra aparece em todas; com vínculo, só na(s) obra(s) marcada(s).
@@ -552,6 +554,14 @@ export default function DiarioObraNovoPage() {
       }
     }
   };
+
+  // Movimentos de estoque (entradas/saídas do dia)
+  const estoqueItemLabel = (i: EstoqueItem) =>
+    [i.nome, i.bitola, i.armado === true ? 'armado' : i.armado === false ? 'não armado' : null].filter(Boolean).join(' · ');
+  const addMovEstoque = () => setMovEstoque(prev => [...prev, { item_id: '', tipo: 'entrada', quantidade: '', observacao: '' }]);
+  const updateMovEstoque = (idx: number, patch: Partial<{ item_id: string; tipo: 'entrada' | 'saida'; quantidade: string; observacao: string }>) =>
+    setMovEstoque(prev => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+  const removeMovEstoque = (idx: number) => setMovEstoque(prev => prev.filter((_, i) => i !== idx));
 
   // Confirmação obrigatória: ou marcou empregados, ou declarou "sem empregados neste dia".
   const maoDeObraConfirmada = empregadosSel.size > 0 || semEmpregados;
@@ -825,6 +835,21 @@ export default function DiarioObraNovoPage() {
       if (empregadosSel.size > 0) {
         await insertDiarioEmpregados(diario.id, Array.from(empregadosSel));
       }
+
+      // Movimentos de estoque lançados neste diário (entradas/saídas do dia)
+      const movRows = movEstoque
+        .filter(m => m.item_id && Number(m.quantidade) > 0)
+        .map(m => ({
+          obra_id: selectedObraId,
+          item_id: m.item_id,
+          diario_id: diario.id,
+          tipo: m.tipo,
+          quantidade: Number(m.quantidade),
+          data,
+          observacao: m.observacao.trim() || null,
+          created_by: user!.id,
+        }));
+      if (movRows.length > 0) await insertEstoqueMovimentos(movRows);
 
       // Create paver_fotos_localizadas for pinned files
       for (const { url, foto } of uploadedFotos) {
@@ -1170,6 +1195,40 @@ export default function DiarioObraNovoPage() {
                 Confirme: marque os empregados presentes ou "Sem empregados neste dia".
               </p>
             )}
+          </div>
+
+          {/* Materiais (estoque) — entradas/saídas do dia */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="font-body">Materiais (estoque)</Label>
+              {movEstoque.length > 0 && <Badge variant="secondary" className="font-body">{movEstoque.length} lançamento(s)</Badge>}
+            </div>
+            <p className="text-xs text-muted-foreground font-body">Registre as entradas e saídas de material do dia (opcional).</p>
+            {movEstoque.length > 0 && (
+              <div className="space-y-2">
+                {movEstoque.map((m, idx) => (
+                  <div key={idx} className="flex flex-wrap items-center gap-2 rounded-md border border-border p-2">
+                    <Select value={m.item_id} onValueChange={(v) => updateMovEstoque(idx, { item_id: v })}>
+                      <SelectTrigger className="h-9 w-full sm:w-[220px] text-xs font-body"><SelectValue placeholder="Material" /></SelectTrigger>
+                      <SelectContent>
+                        {estoqueItens.map(i => <SelectItem key={i.id} value={i.id} className="text-xs font-body">{estoqueItemLabel(i)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <div className="inline-flex rounded-md border border-border p-0.5">
+                      <button type="button" onClick={() => updateMovEstoque(idx, { tipo: 'entrada' })} className={`px-2.5 py-1 text-xs font-body rounded ${m.tipo === 'entrada' ? 'bg-emerald-600 text-white' : 'text-muted-foreground'}`}>Entrada</button>
+                      <button type="button" onClick={() => updateMovEstoque(idx, { tipo: 'saida' })} className={`px-2.5 py-1 text-xs font-body rounded ${m.tipo === 'saida' ? 'bg-amber-600 text-white' : 'text-muted-foreground'}`}>Saída</button>
+                    </div>
+                    <Input type="number" inputMode="decimal" min="0" step="any" value={m.quantidade} onChange={(e) => updateMovEstoque(idx, { quantidade: e.target.value })} placeholder="Qtd" className="h-9 w-24 text-xs font-body" />
+                    <span className="text-xs text-muted-foreground font-body w-8">{estoqueItens.find(i => i.id === m.item_id)?.unidade || ''}</span>
+                    <Input value={m.observacao} onChange={(e) => updateMovEstoque(idx, { observacao: e.target.value })} placeholder="Obs (opcional)" className="h-9 flex-1 min-w-[120px] text-xs font-body" />
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0" onClick={() => removeMovEstoque(idx)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button type="button" variant="outline" size="sm" className="font-body" onClick={addMovEstoque}>
+              <Package className="h-4 w-4 mr-1" /> Adicionar material
+            </Button>
           </div>
 
           {/* EAP Tree */}
