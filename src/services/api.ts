@@ -893,6 +893,7 @@ export interface EstoqueMovimento {
   nota_id?: string | null;
   tipo: EstoqueTipoMov;
   quantidade: number;
+  valor_unitario?: number | null;
   data: string; // YYYY-MM-DD
   observacao: string | null;
   created_by: string | null;
@@ -1086,7 +1087,7 @@ export async function lancarEntradaEstoque(params: {
   fornecedor?: string | null;
   dataEmissao?: string | null;
   valorTotal?: number | null;
-  linhas: { item_id: string; descricao_nf?: string; quantidade: number }[];
+  linhas: { item_id: string; descricao_nf?: string; quantidade: number; valor_unitario?: number | null }[];
 }): Promise<void> {
   const linhasOk = params.linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
   if (linhasOk.length === 0) return;
@@ -1102,7 +1103,9 @@ export async function lancarEntradaEstoque(params: {
   }
   const rows = linhasOk.map((l) => ({
     obra_id: params.obraId, item_id: l.item_id, diario_id: null, nota_id: notaId,
-    tipo: 'entrada' as const, quantidade: Number(l.quantidade), data: params.data,
+    tipo: 'entrada' as const, quantidade: Number(l.quantidade),
+    valor_unitario: l.valor_unitario == null ? null : Number(l.valor_unitario),
+    data: params.data,
     observacao: params.numero ? `NF ${params.numero}` : (temDoc ? 'Documento anexado' : 'Entrada manual'),
     created_by: params.userId,
   }));

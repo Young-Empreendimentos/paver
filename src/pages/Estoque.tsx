@@ -108,6 +108,7 @@ function MovimentosTab({ itens, movimentos }: { itens: EstoqueItem[]; movimentos
               <TableHead className="font-heading">Material</TableHead>
               <TableHead className="font-heading">Tipo</TableHead>
               <TableHead className="font-heading text-right">Qtd</TableHead>
+              <TableHead className="font-heading text-right">Valor unit.</TableHead>
               <TableHead className="font-heading">Obs</TableHead>
             </TableRow>
           </TableHeader>
@@ -122,6 +123,7 @@ function MovimentosTab({ itens, movimentos }: { itens: EstoqueItem[]; movimentos
                     : <Badge className="text-[10px] font-body bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"><ArrowUpFromLine className="h-3 w-3 mr-0.5" />Saída</Badge>}
                 </TableCell>
                 <TableCell className="font-body text-right">{fmtNum(mv.quantidade)} {unById.get(mv.item_id) || ''}</TableCell>
+                <TableCell className="font-body text-right text-xs">{mv.valor_unitario == null ? '—' : 'R$ ' + fmtNum(Number(mv.valor_unitario))}</TableCell>
                 <TableCell className="font-body text-xs text-muted-foreground">{mv.observacao || '—'}</TableCell>
               </TableRow>
             ))}
@@ -333,7 +335,7 @@ function InventarioTab({ obraId, itens, saldoMap }: { obraId: string; itens: Est
 }
 
 // ---------------- Adicionar entrada (manual e/ou NF/recibo em PDF) ----------------
-type NfLinha = { descricao: string; unidade: string; quantidade: string; item_id: string };
+type NfLinha = { descricao: string; unidade: string; quantidade: string; item_id: string; preco: string };
 
 function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] }) {
   const { user } = useAuth();
@@ -368,20 +370,21 @@ function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] })
       const ex = await extrairNf(path);
       if (ex.numero || ex.fornecedor || ex.data_emissao) setMeta({ numero: ex.numero ?? '', fornecedor: ex.fornecedor ?? '', data_emissao: ex.data_emissao ?? '' });
       if (ex.data_emissao) setData(ex.data_emissao);
-      const novas = (ex.itens ?? []).map((it) => ({ descricao: it.descricao ?? '', unidade: it.unidade ?? '', quantidade: it.quantidade == null ? '' : String(it.quantidade), item_id: autoItem(it.descricao ?? '') }));
+      const novas = (ex.itens ?? []).map((it) => ({ descricao: it.descricao ?? '', unidade: it.unidade ?? '', quantidade: it.quantidade == null ? '' : String(it.quantidade), item_id: autoItem(it.descricao ?? ''), preco: it.valor_unitario == null ? '' : String(it.valor_unitario) }));
       setLinhas((prev) => [...prev, ...novas]);
       toast(novas.length ? { title: `${novas.length} item(ns) lido(s) da NF` } : { title: 'Nenhum produto encontrado', description: 'Confira o PDF ou lance manual.', variant: 'destructive' });
     } catch (e: any) { toast({ title: 'Erro ao ler a NF', description: e.message, variant: 'destructive' }); }
     finally { setLendo(false); }
   };
 
-  const addLinha = () => setLinhas((prev) => [...prev, { descricao: '', unidade: '', quantidade: '', item_id: '' }]);
+  const addLinha = () => setLinhas((prev) => [...prev, { descricao: '', unidade: '', quantidade: '', item_id: '', preco: '' }]);
   const setLinha = (idx: number, patch: Partial<NfLinha>) => setLinhas((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   const removeLinha = (idx: number) => setLinhas((prev) => prev.filter((_, i) => i !== idx));
   const limpar = () => { setFile(null); setArquivoPath(null); setLinhas([]); setMeta({ numero: '', fornecedor: '', data_emissao: '' }); setData(new Date().toISOString().slice(0, 10)); };
 
   const prontas = linhas.filter((l) => l.item_id && Number(l.quantidade) > 0);
   const semItem = linhas.filter((l) => l.quantidade && !l.item_id).length;
+  const totalValor = linhas.reduce((s, l) => s + (Number(l.quantidade) > 0 && Number(l.preco) > 0 ? Number(l.quantidade) * Number(l.preco) : 0), 0);
 
   const salvar = async () => {
     if (prontas.length === 0) { toast({ title: 'Nada para lançar', description: 'Adicione itens e vincule ao catálogo.', variant: 'destructive' }); return; }
@@ -392,7 +395,7 @@ function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] })
       await lancarEntradaEstoque({
         obraId, userId: user!.id, data: data || new Date().toISOString().slice(0, 10), arquivoPath: path,
         numero: meta.numero || null, fornecedor: meta.fornecedor || null, dataEmissao: meta.data_emissao || null, valorTotal: null,
-        linhas: prontas.map((l) => ({ item_id: l.item_id, descricao_nf: l.descricao || undefined, quantidade: Number(l.quantidade) })),
+        linhas: prontas.map((l) => ({ item_id: l.item_id, descricao_nf: l.descricao || undefined, quantidade: Number(l.quantidade), valor_unitario: l.preco ? Number(l.preco) : null })),
       });
       qc.invalidateQueries({ queryKey: ['estoque-movimentos', obraId] });
       qc.invalidateQueries({ queryKey: ['estoque-notas', obraId] });
@@ -445,6 +448,8 @@ function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] })
                 <TableHead className="font-heading">Item do catálogo</TableHead>
                 <TableHead className="font-heading text-right">Qtd</TableHead>
                 <TableHead className="font-heading">Un</TableHead>
+                <TableHead className="font-heading text-right">Preço unit.</TableHead>
+                <TableHead className="font-heading text-right">Total</TableHead>
                 <TableHead className="font-heading">Produto (NF)</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -460,14 +465,16 @@ function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] })
                         <SelectContent>{itens.map((i) => <SelectItem key={i.id} value={i.id} className="text-xs font-body">{itemLabel(i)}</SelectItem>)}</SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="text-right"><Input type="number" step="any" value={l.quantidade} onChange={(e) => setLinha(idx, { quantidade: e.target.value })} className="h-8 w-24 text-xs font-body ml-auto" placeholder="0" /></TableCell>
+                    <TableCell className="text-right"><Input type="number" step="any" value={l.quantidade} onChange={(e) => setLinha(idx, { quantidade: e.target.value })} className="h-8 w-20 text-xs font-body ml-auto" placeholder="0" /></TableCell>
                     <TableCell className="font-body text-xs">{un || '—'}</TableCell>
+                    <TableCell className="text-right"><Input type="number" step="any" value={l.preco} onChange={(e) => setLinha(idx, { preco: e.target.value })} className="h-8 w-24 text-xs font-body ml-auto" placeholder="0,00" /></TableCell>
+                    <TableCell className="font-body text-xs text-right">{Number(l.quantidade) > 0 && Number(l.preco) > 0 ? fmtNum(Number(l.quantidade) * Number(l.preco)) : '—'}</TableCell>
                     <TableCell className="font-body text-xs text-muted-foreground max-w-[200px] truncate">{l.descricao || '—'}</TableCell>
                     <TableCell><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeLinha(idx)}><Trash2 className="h-4 w-4" /></Button></TableCell>
                   </TableRow>
                 );
               })}
-              {linhas.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground font-body">Nenhum item. Clique em "Adicionar item" ou leia um PDF.</TableCell></TableRow>}
+              {linhas.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-6 text-sm text-muted-foreground font-body">Nenhum item. Clique em "Adicionar item" ou leia um PDF.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -477,7 +484,7 @@ function EntradaTab({ obraId, itens }: { obraId: string; itens: EstoqueItem[] })
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-foreground font-body">Data</label>
           <Input type="date" value={data} onChange={(e) => setData(e.target.value)} className="h-9 w-[150px] font-body" />
-          <span className="text-xs text-muted-foreground font-body">{prontas.length} p/ lançar{semItem > 0 ? ` · ${semItem} sem item` : ''}</span>
+          <span className="text-xs text-muted-foreground font-body">{prontas.length} p/ lançar{semItem > 0 ? ` · ${semItem} sem item` : ''}{totalValor > 0 ? ` · Total R$ ${fmtNum(totalValor)}` : ''}</span>
         </div>
         <Button onClick={salvar} disabled={salvando || prontas.length === 0} className="bg-accent text-accent-foreground hover:bg-accent/90 font-body">
           {salvando ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ArrowDownToLine className="h-4 w-4 mr-1" />} Lançar {prontas.length} entrada(s)
