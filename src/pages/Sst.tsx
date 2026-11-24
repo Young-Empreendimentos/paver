@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldCheck, Settings2, Building2, Users, Loader2, ArrowRight, HardHat, ChevronDown,
-  ChevronsDownUp, ChevronsUpDown, Search,
+  ChevronsDownUp, ChevronsUpDown, Search, Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { EmpregadoAvatar } from '@/components/EmpregadoAvatar';
@@ -547,6 +550,47 @@ function ObraPanel({
   );
 }
 
+// ---------------- Combobox de empreiteiro (busca digitável) ----------------
+function EmpreiteiroCombobox({
+  empreiteiros, value, onChange,
+}: {
+  empreiteiros: Empreiteiro[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const atual = empreiteiros.find((e) => e.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-body">
+          <div className="flex items-center gap-2 truncate">
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">{atual ? atual.razao_social : 'Escolha o empreiteiro'}</span>
+          </div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar empreiteiro..." className="font-body" />
+          <CommandList>
+            <CommandEmpty className="font-body text-xs p-2">Nenhum empreiteiro encontrado.</CommandEmpty>
+            <CommandGroup>
+              {empreiteiros.map((e) => (
+                <CommandItem key={e.id} value={e.razao_social} onSelect={() => { onChange(e.id); setOpen(false); }} className="font-body">
+                  <Check className={cn('mr-2 h-4 w-4', value === e.id ? 'opacity-100' : 'opacity-0')} />
+                  {e.razao_social}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ---------------- Página ----------------
 export default function Sst() {
   const actions = useSstActions();
@@ -623,12 +667,7 @@ export default function Sst() {
 
         <TabsContent value="empresa" className="space-y-4 pt-2">
           <div className="max-w-sm">
-            <Select value={empreiteiroAtual?.id ?? ''} onValueChange={setEmpreiteiroSel}>
-              <SelectTrigger className="font-body"><SelectValue placeholder="Escolha o empreiteiro" /></SelectTrigger>
-              <SelectContent>
-                {empreiteirosAtivos.map((e) => <SelectItem key={e.id} value={e.id} className="font-body">{e.razao_social}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <EmpreiteiroCombobox empreiteiros={empreiteirosAtivos} value={empreiteiroAtual?.id ?? ''} onChange={setEmpreiteiroSel} />
           </div>
           {loadingEmp ? (
             <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>
