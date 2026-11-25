@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EmpregadoAvatar } from '@/components/EmpregadoAvatar';
 import {
-  fetchEmpreiteiros, createEmpreiteiro, updateEmpreiteiro, deleteEmpreiteiro,
+  fetchEmpreiteiros, createEmpreiteiro, updateEmpreiteiro,
   fetchAllEmpregados, createEmpregado, updateEmpregado,
   fetchObras, fetchEmpreiteiroObras, setEmpreiteiroObras,
   fetchAllEmpreiteiroArquivos, addEmpreiteiroArquivo, deleteEmpreiteiroArquivo,
@@ -406,14 +406,10 @@ export default function Empreiteiros() {
     onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: deleteEmpreiteiro,
-    onSuccess: () => {
-      afterSave();
-      queryClient.invalidateQueries({ queryKey: ['empregados-all'] });
-      queryClient.invalidateQueries({ queryKey: ['empreiteiro-arquivos'] });
-      toast({ title: 'Empreiteiro excluído' });
-    },
+  // Desativar/Reativar empreiteiro (preserva histórico — não há exclusão)
+  const toggleAtivoMut = useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => updateEmpreiteiro(id, { ativo }),
+    onSuccess: (_d, vars) => { afterSave(); toast({ title: vars.ativo ? 'Empreiteiro reativado' : 'Empreiteiro desativado' }); },
     onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
@@ -549,19 +545,14 @@ export default function Empreiteiros() {
                       <Users className="h-3 w-3 mr-1" /> Empregados
                     </Button>
                     <Button size="sm" variant="outline" className="h-7 text-xs font-body" onClick={() => openEdit(emp)}><Pencil className="h-3 w-3 mr-1" /> Editar</Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild><Button size="sm" variant="outline" className="h-7 text-xs text-destructive font-body"><Trash2 className="h-3 w-3 mr-1" /> Excluir</Button></AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="font-heading">Excluir empreiteiro?</AlertDialogTitle>
-                          <AlertDialogDescription className="font-body">{emp.razao_social} e todos os seus empregados serão removidos. Ação irreversível.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMut.mutate(emp.id)} className="bg-destructive text-destructive-foreground font-body">Excluir</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      size="sm" variant="outline"
+                      className={`h-7 text-xs font-body ${emp.ativo ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}
+                      disabled={toggleAtivoMut.isPending}
+                      onClick={() => toggleAtivoMut.mutate({ id: emp.id, ativo: !emp.ativo })}
+                    >
+                      {emp.ativo ? <><PowerOff className="h-3 w-3 mr-1" /> Desativar</> : <><Power className="h-3 w-3 mr-1" /> Reativar</>}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
