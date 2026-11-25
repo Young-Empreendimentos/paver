@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { HardHat, Plus, Pencil, Trash2, Loader2, Search, Users, Phone, FileText, ExternalLink, Paperclip, UserPlus } from 'lucide-react';
+import { HardHat, Plus, Pencil, Trash2, Loader2, Search, Users, Phone, FileText, ExternalLink, Paperclip, UserPlus, Power, PowerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -119,6 +119,13 @@ function EmpregadosDialog({
     onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
+  // Desativar/Reativar (preserva o histórico — preferível a excluir)
+  const toggleAtivoMut = useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => updateEmpregado(id, { ativo }),
+    onSuccess: (_d, vars) => { invalidate(); toast({ title: vars.ativo ? 'Reativado' : 'Desativado' }); },
+    onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
+  });
+
   const openDoc = async (path: string) => {
     try {
       const url = await getSignedUrl(EMPREITEIROS_BUCKET, path, 300);
@@ -185,6 +192,14 @@ function EmpregadosDialog({
                         <FileText className="h-3 w-3 mr-1" /> Documento
                       </Button>
                     )}
+                    <Button
+                      variant="ghost" size="sm"
+                      className={`h-7 text-xs font-body ${emp.ativo ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}
+                      disabled={toggleAtivoMut.isPending}
+                      onClick={() => toggleAtivoMut.mutate({ id: emp.id, ativo: !emp.ativo })}
+                    >
+                      {emp.ativo ? <><PowerOff className="h-3 w-3 mr-1" /> Desativar</> : <><Power className="h-3 w-3 mr-1" /> Reativar</>}
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(emp)}><Pencil className="h-3 w-3" /></Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -193,7 +208,7 @@ function EmpregadosDialog({
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="font-heading">Excluir {rotulo}?</AlertDialogTitle>
-                          <AlertDialogDescription className="font-body">{emp.nome_completo} será removido. Ação irreversível.</AlertDialogDescription>
+                          <AlertDialogDescription className="font-body">{emp.nome_completo} será removido e <strong>o histórico será perdido</strong>. Se a pessoa só saiu, prefira <strong>Desativar</strong> (mantém o histórico). Excluir é irreversível.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
