@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EmpregadoAvatar } from '@/components/EmpregadoAvatar';
 import {
   fetchEmpreiteiros, createEmpreiteiro, updateEmpreiteiro, deleteEmpreiteiro,
-  fetchAllEmpregados, createEmpregado, updateEmpregado, deleteEmpregado,
+  fetchAllEmpregados, createEmpregado, updateEmpregado,
   fetchObras, fetchEmpreiteiroObras, setEmpreiteiroObras,
   fetchAllEmpreiteiroArquivos, addEmpreiteiroArquivo, deleteEmpreiteiroArquivo,
   uploadPrivateFile, getSignedUrl, EMPREITEIROS_BUCKET,
@@ -113,13 +113,7 @@ function EmpregadosDialog({
     onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: deleteEmpregado,
-    onSuccess: () => { invalidate(); toast({ title: 'Removido' }); },
-    onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
-  });
-
-  // Desativar/Reativar (preserva o histórico — preferível a excluir)
+  // Desativar/Reativar (preserva o histórico — não há exclusão de empregado)
   const toggleAtivoMut = useMutation({
     mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => updateEmpregado(id, { ativo }),
     onSuccess: (_d, vars) => { invalidate(); toast({ title: vars.ativo ? 'Reativado' : 'Desativado' }); },
@@ -201,21 +195,6 @@ function EmpregadosDialog({
                       {emp.ativo ? <><PowerOff className="h-3 w-3 mr-1" /> Desativar</> : <><Power className="h-3 w-3 mr-1" /> Reativar</>}
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(emp)}><Pencil className="h-3 w-3" /></Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="font-heading">Excluir {rotulo}?</AlertDialogTitle>
-                          <AlertDialogDescription className="font-body">{emp.nome_completo} será removido e <strong>o histórico será perdido</strong>. Se a pessoa só saiu, prefira <strong>Desativar</strong> (mantém o histórico). Excluir é irreversível.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteMut.mutate(emp.id)} className="bg-destructive text-destructive-foreground font-body">Excluir</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
                   </div>
                 </CardContent>
               </Card>
